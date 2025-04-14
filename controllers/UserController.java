@@ -65,8 +65,10 @@ public class UserController {
     public boolean updateProfile(User updatedUser) {
         for (User user : users) {
             if (user.getNric().equals(updatedUser.getNric())) {
-                user.setName(updatedUser.getName());
                 user.setNric(updatedUser.getNric());
+                user.setName(updatedUser.getName());
+                user.setAge(updatedUser.getAge());
+                user.setMaritalStatus(updatedUser.getMaritalStatus());
                 user.setUserType(updatedUser.getUserType());
                 System.out.println("Profile updated for user: " + updatedUser.getNric());
                 return true;

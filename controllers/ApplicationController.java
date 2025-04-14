@@ -5,7 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class ApplicationController {
-    private List<Application> applications = new ArrayList<>(); // Simulating a database
+    private static List<Application> applications = new ArrayList<>(); // Simulating a database
 
     // Submit an application
     public boolean submitApplication(Application application) {
@@ -55,6 +55,15 @@ public class ApplicationController {
             }
         }
         return projectApplications;
+    }
+    public List<Application> getApplicationsByApplicant(String appNRIC) {
+        List<Application> applicantApplications = new ArrayList<>();
+        for (Application application : applications) {
+            if (application.getApplicantNRIC().equals(appNRIC)) {
+                applicantApplications.add(application);
+            }
+        }
+        return applicantApplications;
     }
 
     // Get applications by status

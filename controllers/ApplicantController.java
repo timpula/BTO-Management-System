@@ -27,7 +27,6 @@ public class ApplicantController {
         System.out.println("Total projects available: " + projects.size());
 
         for (Project project : projects) {
-            System.out.println("Checking eligibility for project: " + project.getProjectName());
             if (checkEligibility(applicant, project)) {
                 System.out.println("Applicant is eligible for project: " + project.getProjectName());
                 eligibleProjects.add(project);
@@ -65,16 +64,15 @@ public class ApplicantController {
     // View application status
     public Application viewApplicationStatus(Applicant applicant) {
         System.out.println("Checking application status for Applicant NRIC: " + applicant.getNric());
-        for (Application application : applications) {
-            System.out.println("Application ID: " + application.getApplicationId() +
-                    ", NRIC: " + application.getApplicantNRIC() +
-                    ", Status: " + application.getStatus());
-            if (application.getApplicantNRIC().equalsIgnoreCase(applicant.getNric()) &&
-                    !application.getStatus().equalsIgnoreCase("Withdrawn")) {
-                System.out.println("Active application found: " + application.getApplicationId());
-                return application;
-            }
+    
+        // Delegate to ApplicationController to get the application by NRIC
+        Application application = applicationController.getApplicationByNRIC(applicant.getNric());
+    
+        if (application != null) {
+            System.out.println("Active application found: " + application.getApplicationId());
+            return application;
         }
+    
         System.out.println("No active application found for Applicant NRIC: " + applicant.getNric());
         return null; // No active application found
     }
@@ -101,10 +99,7 @@ public class ApplicantController {
             boolean maritalStatusEligible = validateMaritalStatus(applicant, flatType);
 
             if (ageEligible && maritalStatusEligible) {
-                System.out.println("Applicant is eligible for flat type: " + flatType);
                 return true;
-            } else {
-                System.out.println("Applicant is NOT eligible for flat type: " + flatType);
             }
         }
         return false;
@@ -128,7 +123,10 @@ public class ApplicantController {
 
         if (flatType.equals("2-Room") && maritalStatus.equals("Single")) {
             return true;
-        } else if (!flatType.equals("2-Room") && maritalStatus.equals("Married")) {
+        } else if (flatType.equals("3-Room") && maritalStatus.equals("Married")) {
+            return true;
+        }
+        else if (flatType.equals("2-Room") && maritalStatus.equals("Married")){
             return true;
         }
         return false;
