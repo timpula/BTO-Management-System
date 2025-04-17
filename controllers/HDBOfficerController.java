@@ -1,11 +1,6 @@
 package controllers;
 
-import models.HDBOfficer;
-import models.Project;
-import models.Application;
-import models.Applicant;
-import models.Receipt;
-import models.User;
+import models.*;
 
 import java.util.ArrayList;
 import java.util.Date;
@@ -13,69 +8,65 @@ import java.util.List;
 
 public class HDBOfficerController {
 
-    private static List<HDBOfficer> officers = new ArrayList<>(); // Simulating a database of officers
-    private static List<Project> projects = new ArrayList<>(); // Simulating a database of projects
-    private static List<Application> applications = new ArrayList<>(); // Simulating a database of applications
-    private static List<Applicant> applicants = new ArrayList<>(); // Simulating a database of applicants
-    private static List<Receipt> receipts = new ArrayList<>(); // Simulating a database of receipts
+    // Simulating databases
+    private static List<HDBOfficer> officers = new ArrayList<>();
+    private static List<Project> projects = new ArrayList<>();
+    private static List<Application> applications = new ArrayList<>();
+    private static List<Applicant> applicants = new ArrayList<>();
+    private static List<Receipt> receipts = new ArrayList<>();
 
-    // Register officer for a project
+    /**
+     * Allows an HDB Officer to register for a project if eligibility conditions are met
+     */
     public boolean registerForProject(String officerNRIC, String projectId) {
-        // Check if officer has applied for this project
         for (Application app : applications) {
             if (app.getApplicantNRIC().equals(officerNRIC) && app.getProjectId().equals(projectId)) {
-                System.out.println("Cannot register as HDB Officer. You have already applied for this project as an Applicant.");
                 return false;
             }
         }
-        
-        // Check if officer is already registered for another project within application period
+
+        Date now = new Date();
         for (Project project : projects) {
-            if (project.getProjectId().equals(projectId)) {
-                continue; // Skip the current project being applied for
-            }
-            
-            // Check if officer is registered for another project in its application period
-            Date currentDate = new Date();
-            if (currentDate.after(project.getApplicationOpeningDate()) && 
-                currentDate.before(project.getApplicationClosingDate())) {
-                
+            if (!project.getProjectId().equals(projectId) &&
+                now.after(project.getApplicationOpeningDate()) &&
+                now.before(project.getApplicationClosingDate())) {
+
                 for (HDBOfficer officer : officers) {
-                    if (officer.getNric().equals(officerNRIC) && 
-                        officer.getAssignedProjectId() != null && 
+                    if (officer.getNric().equals(officerNRIC) &&
+                        officer.getAssignedProjectId() != null &&
                         officer.getAssignedProjectId().equals(project.getProjectId())) {
-                        System.out.println("Cannot register. You are already registered for another project within its application period.");
                         return false;
                     }
                 }
             }
         }
-        
+
         for (HDBOfficer officer : officers) {
             if (officer.getNric().equals(officerNRIC)) {
-                if (officer.getAssignedProjectId() != null) {
-                    System.out.println("Officer is already assigned to a project.");
-                    return false;
-                }
+                if (officer.getAssignedProjectId() != null) return false;
                 officer.setAssignedProjectId(projectId);
                 officer.setRegistrationStatus("Pending");
                 return true;
             }
         }
-        return false; // Officer not found
+        return false;
     }
 
-    // View registration status
+    /**
+     * View the status of officer registration for a project
+     */
     public String viewRegistrationStatus(String officerNRIC, String projectId) {
         for (HDBOfficer officer : officers) {
             if (officer.getNric().equals(officerNRIC) && projectId.equals(officer.getAssignedProjectId())) {
                 return officer.getRegistrationStatus();
             }
         }
-        return "Not Registered"; // Officer not registered for the project
+        return "Not Registered";
     }
 
-    // View assigned project
+    /**
+     * Retrieves the assigned project if the officer is approved
+     */
     public Project viewAssignedProject(String officerNRIC) {
         for (HDBOfficer officer : officers) {
             if (officer.getNric().equals(officerNRIC) && "Approved".equals(officer.getRegistrationStatus())) {
@@ -86,31 +77,33 @@ public class HDBOfficerController {
                 }
             }
         }
-        return null; // No assigned project found
+        return null;
     }
 
-    // Retrieve applicant by NRIC
+    /**
+     * Retrieves an applicant by NRIC or generates a dummy if found in applications
+     */
     public Applicant retrieveApplicantByNRIC(String applicantNRIC) {
-        // First check our applicants list
         for (Applicant applicant : applicants) {
             if (applicant.getNric().equals(applicantNRIC)) {
                 return applicant;
             }
         }
-        
-        // If not found in our list, check applications and create a mock applicant
+
         for (Application application : applications) {
             if (application.getApplicantNRIC().equals(applicantNRIC)) {
                 Applicant newApplicant = new Applicant(application.getApplicantNRIC(), "Applicant Name", "password", 30, "Single");
-                applicants.add(newApplicant); // Add to our list for future reference
+                applicants.add(newApplicant);
                 return newApplicant;
             }
         }
-        
-        return null; // Applicant not found
+
+        return null;
     }
 
-    // Update remaining flats for a project and flat type
+    /**
+     * Updates the remaining flat units for a project
+     */
     public boolean updateFlatRemaining(String projectId, String flatType, int newCount) {
         for (Project project : projects) {
             if (project.getProjectId().equals(projectId)) {
@@ -118,10 +111,12 @@ public class HDBOfficerController {
                 return true;
             }
         }
-        return false; // Project not found
+        return false;
     }
 
-    // Update application status
+    /**
+     * Updates the status of an application
+     */
     public boolean updateApplicationStatus(String applicationId, String newStatus) {
         for (Application application : applications) {
             if (application.getApplicationId().equals(applicationId)) {
@@ -129,22 +124,20 @@ public class HDBOfficerController {
                 return true;
             }
         }
-        return false; // Application not found
+        return false;
     }
 
-    // Generate booking receipt
+    /**
+     * Generates a booking receipt for a successful or booked application
+     */
     public Receipt generateBookingReceipt(String applicationId) {
         for (Application application : applications) {
-            if (application.getApplicationId().equals(applicationId) && 
-               (application.getStatus().equals("Successful") || application.getStatus().equals("Booked"))) {
-                
-                // Get applicant details
+            if (application.getApplicationId().equals(applicationId) &&
+                (application.getStatus().equals("Successful") || application.getStatus().equals("Booked"))) {
+
                 Applicant applicant = retrieveApplicantByNRIC(application.getApplicantNRIC());
-                if (applicant == null) {
-                    return null; // No applicant found
-                }
-                
-                // Get project details
+                if (applicant == null) return null;
+
                 Project project = null;
                 for (Project p : projects) {
                     if (p.getProjectId().equals(application.getProjectId())) {
@@ -152,30 +145,29 @@ public class HDBOfficerController {
                         break;
                     }
                 }
-                
-                if (project == null) {
-                    return null; // No project found
-                }
-                
-                // Create and save receipt
+                if (project == null) return null;
+
                 Receipt receipt = new Receipt();
                 receipt.setReceiptId("REC" + System.currentTimeMillis());
-                receipt.setApplicantNRIC(application.getApplicantNRIC());
+                receipt.setApplicationId(application.getApplicationId());
+                receipt.setApplicantNRIC(applicant.getNric());
                 receipt.setApplicantName(applicant.getName());
                 receipt.setApplicantAge(applicant.getAge());
                 receipt.setMaritalStatus(applicant.getMaritalStatus());
                 receipt.setProjectName(project.getProjectName());
                 receipt.setFlatType(application.getFlatType());
                 receipt.setBookingDate(new Date());
-                
-                receipts.add(receipt); // Save receipt for future reference
+
+                receipts.add(receipt);
                 return receipt;
             }
         }
-        return null; // Receipt cannot be generated
+        return null;
     }
-    
-    // Update flat selection for an application
+
+    /**
+     * Updates the selected flat type for an application
+     */
     public boolean updateFlatSelection(String applicationId, String flatType) {
         for (Application application : applications) {
             if (application.getApplicationId().equals(applicationId)) {
@@ -183,25 +175,27 @@ public class HDBOfficerController {
                 return true;
             }
         }
-        return false; // Application not found
+        return false;
     }
-    
-    // Update applicant profile with flat type under a project
+
+    /**
+     * Updates the applicant profile with selected project and flat type
+     */
     public boolean updateApplicantProfile(String applicantNRIC, String projectId, String flatType) {
         Applicant applicant = retrieveApplicantByNRIC(applicantNRIC);
-        if (applicant == null) {
-            return false; // Applicant not found
-        }
-        
-        // In a real implementation, you would update the applicant's profile with the chosen flat type
-        // For this simulation, we'll just assume it's successful
+        if (applicant == null) return false;
+
+        applicant.setBookedFlatType(flatType);
+        applicant.setBookedProjectId(projectId);
         return true;
     }
-    
-    // Check if an applicant has the specified application status for a project
+
+    /**
+     * Checks if applicant has a given application status in a specific project
+     */
     public boolean checkApplicantApplicationStatus(String applicantNRIC, String projectId, String status) {
         for (Application application : applications) {
-            if (application.getApplicantNRIC().equals(applicantNRIC) && 
+            if (application.getApplicantNRIC().equals(applicantNRIC) &&
                 application.getProjectId().equals(projectId) &&
                 application.getStatus().equals(status)) {
                 return true;
@@ -209,30 +203,32 @@ public class HDBOfficerController {
         }
         return false;
     }
-    
-    // Get receipt by application ID
+
+    /**
+     * Retrieves a booking receipt by application ID
+     */
     public Receipt getReceiptByApplicationId(String applicationId) {
         for (Receipt receipt : receipts) {
             if (receipt.getApplicationId().equals(applicationId)) {
                 return receipt;
             }
         }
-        return null; // Receipt not found
+        return null;
     }
-    
-    // Add these dummy initialization methods for testing
+
+    // Dummy data setup for testing
     public void addDummyOfficer(HDBOfficer officer) {
         officers.add(officer);
     }
-    
+
     public void addDummyProject(Project project) {
         projects.add(project);
     }
-    
+
     public void addDummyApplication(Application application) {
         applications.add(application);
     }
-    
+
     public void addDummyApplicant(Applicant applicant) {
         applicants.add(applicant);
     }

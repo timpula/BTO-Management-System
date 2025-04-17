@@ -10,7 +10,7 @@ public class Main {
     public static void main(String[] args) {
         System.out.println("Welcome to the BTO Management System!");
 
-        // Initialize the system
+        // Initialize the systemz
         if (!CSVReader.initializeSystem()) {
             System.out.println("System initialization failed. Exiting...");
             return;

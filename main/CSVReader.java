@@ -4,6 +4,7 @@ import controllers.UserController;
 import controllers.ProjectController;
 import models.User;
 import models.Project;
+import models.HDBOfficer;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
@@ -13,6 +14,9 @@ import java.text.ParseException;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Reads data from CSV files to initialize the system.
+ */
 public class CSVReader {
     private static final SimpleDateFormat excelDateFormat = new SimpleDateFormat("dd/MM/yyyy");
     private static final CSVFilePaths filePaths = new CSVFilePaths();
@@ -62,10 +66,6 @@ public class CSVReader {
             User user = new User(nric, name, password, userType, age, maritalStatus);
             userController.addUser(user);
             System.out.println("Loaded user: " + name + " (" + userType + ")");
-            System.out.println("User NRIC: " + nric);
-            System.out.println("User Age: " + age);
-            System.out.println("User Marital Status: " + maritalStatus);
-            System.out.println("User Password: " + password);
         }
         reader.close();
         System.out.println("Loaded users from: " + filePath);
@@ -73,6 +73,7 @@ public class CSVReader {
 
     /**
      * Loads projects from a CSV file and adds them to the ProjectController.
+     * Also auto-assigns officers (by name) from the Officer column and decrements available slots.
      *
      * @param filePath The path to the CSV file.
      * @throws IOException If an error occurs while reading the file.
@@ -81,8 +82,16 @@ public class CSVReader {
         BufferedReader reader = new BufferedReader(new FileReader(filePath));
         String line = reader.readLine(); // Skip the header
         ProjectController projectController = new ProjectController();
+        UserController userController = new UserController();
+
         while ((line = reader.readLine()) != null) {
             String[] data = line.split(",");
+
+            if (data.length < 13) {
+                System.err.println("Skipping malformed project line: " + line);
+                continue;
+            }
+
             String projectName = data[0];
             String neighborhood = data[1];
             String type1 = data[2];
@@ -95,49 +104,61 @@ public class CSVReader {
             String closingDate = data[9];
             String manager = data[10];
             int officerSlots = Integer.parseInt(data[11]);
+            String officerList = data[12]; // Officer names (comma-separated)
 
-            // Create and add projects for both types
-            createAndAddProject(projectController, projectName, neighborhood, type1, unitsType1, openingDate, closingDate, officerSlots);
-            createAndAddProject(projectController, projectName, neighborhood, type2, unitsType2, openingDate, closingDate, officerSlots);
+            // Add 2 flat types as separate projects
+            String[] flatTypes = {type1, type2};
+            int[] unitCounts = {unitsType1, unitsType2};
+
+            for (int i = 0; i < flatTypes.length; i++) {
+                Project project = new Project();
+                project.setProjectName(projectName + " - " + flatTypes[i]);
+                project.setNeighborhood(neighborhood);
+
+                Map<String, Integer> flatTypeUnits = new HashMap<>();
+                flatTypeUnits.put(flatTypes[i], unitCounts[i]);
+                project.setFlatTypeUnits(flatTypeUnits);
+
+                try {
+                    project.setApplicationOpeningDate(excelDateFormat.parse(openingDate));
+                    project.setApplicationClosingDate(excelDateFormat.parse(closingDate));
+                } catch (ParseException e) {
+                    System.err.println("Invalid date format for project: " + projectName);
+                    continue;
+                }
+
+                project.setTotalOfficerSlots(officerSlots);
+                project.setAvailableOfficerSlots(officerSlots);
+                project.setCreatorNRIC(manager);
+
+                boolean created = projectController.createProject(project);
+
+                if (created) {
+                    // Auto-assign officers based on names
+                    for (String officerName : officerList.split(",")) {
+                        officerName = officerName.trim();
+                        if (!officerName.isEmpty()) {
+                            User user = userController.viewUserDetails(officerName);
+                            if (user instanceof HDBOfficer) {
+                                HDBOfficer officer = (HDBOfficer) user;
+                                officer.setAssignedProjectId(project.getProjectId());
+                                officer.setRegistrationStatus("Approved");
+
+                                // Decrease available officer slot
+                                int currentSlots = project.getAvailableOfficerSlots();
+                                project.setAvailableOfficerSlots(Math.max(0, currentSlots - 1));
+
+                                System.out.println("Auto-assigned officer " + officerName + " to " + project.getProjectName());
+                            } else {
+                                System.err.println("Officer not found or wrong type: " + officerName);
+                            }
+                        }
+                    }
+                }
+            }
         }
+
         reader.close();
         System.out.println("Loaded projects from: " + filePath);
-    }
-
-    /**
-     * Helper method to create and add a project to the ProjectController.
-     *
-     * @param projectController The ProjectController instance.
-     * @param projectName       The name of the project.
-     * @param neighborhood      The neighborhood of the project.
-     * @param flatType          The flat type (e.g., "2-Room").
-     * @param units             The number of units for the flat type.
-     * @param openingDate       The application opening date.
-     * @param closingDate       The application closing date.
-     * @param officerSlots      The number of officer slots for the project.
-     */
-    private static void createAndAddProject(ProjectController projectController, String projectName, String neighborhood,
-                                            String flatType, int units, String openingDate, String closingDate, int officerSlots) {
-        Project project = new Project();
-        project.setProjectName(projectName + " - " + flatType); // Append flat type to distinguish
-        project.setNeighborhood(neighborhood);
-
-        // Use a mutable map for flat type units
-        Map<String, Integer> flatTypeUnits = new HashMap<>();
-        flatTypeUnits.put(flatType, units);
-        project.setFlatTypeUnits(flatTypeUnits);
-
-        try {
-            project.setApplicationOpeningDate(excelDateFormat.parse(openingDate));
-            project.setApplicationClosingDate(excelDateFormat.parse(closingDate));
-        } catch (ParseException e) {
-            System.err.println("Error parsing dates for project: " + projectName + " - " + flatType);
-            return; // Skip this project if dates are invalid
-        }
-
-        project.setTotalOfficerSlots(officerSlots);
-
-        // Add the project to the ProjectController
-        projectController.createProject(project);
     }
 }
