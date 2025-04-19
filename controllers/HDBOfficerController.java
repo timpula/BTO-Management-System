@@ -8,15 +8,14 @@ import java.util.List;
 
 public class HDBOfficerController {
 
-    // Simulating databases
+    // Simulating local databases (users, applications, etc.)
     private static List<HDBOfficer> officers = new ArrayList<>();
-    private static List<Project> projects = new ArrayList<>();
     private static List<Application> applications = new ArrayList<>();
     private static List<Applicant> applicants = new ArrayList<>();
     private static List<Receipt> receipts = new ArrayList<>();
 
     /**
-     * Allows an HDB Officer to register for a project if eligibility conditions are met
+     * Allows an HDB Officer to register for a project if eligibility conditions are met.
      */
     public boolean registerForProject(String officerNRIC, String projectId) {
         for (Application app : applications) {
@@ -26,19 +25,12 @@ public class HDBOfficerController {
         }
 
         Date now = new Date();
-        for (Project project : projects) {
-            if (!project.getProjectId().equals(projectId) &&
-                now.after(project.getApplicationOpeningDate()) &&
-                now.before(project.getApplicationClosingDate())) {
-
-                for (HDBOfficer officer : officers) {
-                    if (officer.getNric().equals(officerNRIC) &&
-                        officer.getAssignedProjectId() != null &&
-                        officer.getAssignedProjectId().equals(project.getProjectId())) {
-                        return false;
-                    }
-                }
-            }
+        ProjectController projectController = new ProjectController();
+        Project project = projectController.getProjectDetails(projectId);
+        if (project == null ||
+            now.before(project.getApplicationOpeningDate()) ||
+            now.after(project.getApplicationClosingDate())) {
+            return false;
         }
 
         for (HDBOfficer officer : officers) {
@@ -49,6 +41,7 @@ public class HDBOfficerController {
                 return true;
             }
         }
+
         return false;
     }
 
@@ -56,32 +49,57 @@ public class HDBOfficerController {
      * View the status of officer registration for a project
      */
     public String viewRegistrationStatus(String officerNRIC, String projectId) {
-        for (HDBOfficer officer : officers) {
-            if (officer.getNric().equals(officerNRIC) && projectId.equals(officer.getAssignedProjectId())) {
+        UserController userController = new UserController();
+        User user = userController.viewUserDetails(officerNRIC);
+    
+        if (user instanceof HDBOfficer) {
+            HDBOfficer officer = (HDBOfficer) user;
+    
+            System.out.println("DEBUG: Officer NRIC = " + officer.getNric());
+            System.out.println("DEBUG: Assigned Project ID = " + officer.getAssignedProjectId());
+            System.out.println("DEBUG: Registration Status = " + officer.getRegistrationStatus());
+            System.out.println("DEBUG: Input Project ID = " + projectId);
+    
+            if (projectId.equals(officer.getAssignedProjectId())) {
                 return officer.getRegistrationStatus();
             }
         }
+    
         return "Not Registered";
     }
+    
 
     /**
-     * Retrieves the assigned project if the officer is approved
+     * ✅ Retrieves the assigned project if the officer is approved
+     * ✅ Uses ProjectController instead of local list
      */
     public Project viewAssignedProject(String officerNRIC) {
-        for (HDBOfficer officer : officers) {
-            if (officer.getNric().equals(officerNRIC) && "Approved".equals(officer.getRegistrationStatus())) {
-                for (Project project : projects) {
-                    if (project.getProjectId().equals(officer.getAssignedProjectId())) {
-                        return project;
-                    }
-                }
+        UserController userController = new UserController();
+        User user = userController.viewUserDetails(officerNRIC);
+    
+        if (user instanceof HDBOfficer) {
+            HDBOfficer officer = (HDBOfficer) user;
+    
+            System.out.println("DEBUG: Officer NRIC = " + officerNRIC);
+            System.out.println("DEBUG: Assigned Project ID = " + officer.getAssignedProjectId());
+            System.out.println("DEBUG: Registration Status = " + officer.getRegistrationStatus());
+    
+            if (officer.getAssignedProjectId() != null && "Approved".equalsIgnoreCase(officer.getRegistrationStatus())) {
+                ProjectController projectController = new ProjectController();
+                String projectId = officer.getAssignedProjectId();
+                System.out.println("DEBUG: Fetching project with ID = " + projectId);
+                return projectController.getProjectDetails(projectId);
             }
         }
+    
+        System.out.println("DEBUG: Officer not found or not approved.");
         return null;
     }
+    
+       
 
     /**
-     * Retrieves an applicant by NRIC or generates a dummy if found in applications
+     * Retrieves an applicant by NRIC or creates a dummy if found in applications.
      */
     public Applicant retrieveApplicantByNRIC(String applicantNRIC) {
         for (Applicant applicant : applicants) {
@@ -102,20 +120,20 @@ public class HDBOfficerController {
     }
 
     /**
-     * Updates the remaining flat units for a project
+     * Updates the remaining flat units for a project.
      */
     public boolean updateFlatRemaining(String projectId, String flatType, int newCount) {
-        for (Project project : projects) {
-            if (project.getProjectId().equals(projectId)) {
-                project.getFlatTypeUnits().put(flatType, newCount);
-                return true;
-            }
+        ProjectController projectController = new ProjectController();
+        Project project = projectController.getProjectDetails(projectId);
+        if (project != null) {
+            project.getFlatTypeUnits().put(flatType, newCount);
+            return true;
         }
         return false;
     }
 
     /**
-     * Updates the status of an application
+     * Updates the status of an application.
      */
     public boolean updateApplicationStatus(String applicationId, String newStatus) {
         for (Application application : applications) {
@@ -128,7 +146,7 @@ public class HDBOfficerController {
     }
 
     /**
-     * Generates a booking receipt for a successful or booked application
+     * Generates a booking receipt for a successful or booked application.
      */
     public Receipt generateBookingReceipt(String applicationId) {
         for (Application application : applications) {
@@ -138,13 +156,8 @@ public class HDBOfficerController {
                 Applicant applicant = retrieveApplicantByNRIC(application.getApplicantNRIC());
                 if (applicant == null) return null;
 
-                Project project = null;
-                for (Project p : projects) {
-                    if (p.getProjectId().equals(application.getProjectId())) {
-                        project = p;
-                        break;
-                    }
-                }
+                ProjectController projectController = new ProjectController();
+                Project project = projectController.getProjectDetails(application.getProjectId());
                 if (project == null) return null;
 
                 Receipt receipt = new Receipt();
@@ -166,7 +179,7 @@ public class HDBOfficerController {
     }
 
     /**
-     * Updates the selected flat type for an application
+     * Updates the selected flat type for an application.
      */
     public boolean updateFlatSelection(String applicationId, String flatType) {
         for (Application application : applications) {
@@ -179,7 +192,7 @@ public class HDBOfficerController {
     }
 
     /**
-     * Updates the applicant profile with selected project and flat type
+     * Updates the applicant profile with selected project and flat type.
      */
     public boolean updateApplicantProfile(String applicantNRIC, String projectId, String flatType) {
         Applicant applicant = retrieveApplicantByNRIC(applicantNRIC);
@@ -191,7 +204,7 @@ public class HDBOfficerController {
     }
 
     /**
-     * Checks if applicant has a given application status in a specific project
+     * Checks if an applicant has a given application status for a specific project.
      */
     public boolean checkApplicantApplicationStatus(String applicantNRIC, String projectId, String status) {
         for (Application application : applications) {
@@ -205,7 +218,7 @@ public class HDBOfficerController {
     }
 
     /**
-     * Retrieves a booking receipt by application ID
+     * Retrieves a booking receipt by application ID.
      */
     public Receipt getReceiptByApplicationId(String applicationId) {
         for (Receipt receipt : receipts) {
@@ -216,13 +229,9 @@ public class HDBOfficerController {
         return null;
     }
 
-    // Dummy data setup for testing
+    // For testing purposes
     public void addDummyOfficer(HDBOfficer officer) {
         officers.add(officer);
-    }
-
-    public void addDummyProject(Project project) {
-        projects.add(project);
     }
 
     public void addDummyApplication(Application application) {

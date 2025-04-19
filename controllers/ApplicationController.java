@@ -17,22 +17,35 @@ public class ApplicationController {
                     return false;
                 }
             }
-            
+    
             // Check if applicant already has an active application
             Application existingApplication = getApplicationByNRIC(application.getApplicantNRIC());
             if (existingApplication != null && !existingApplication.getStatus().equals("Withdrawn")) {
                 System.out.println("Applicant already has an active application: " + existingApplication.getApplicationId());
                 return false;
             }
-            
+    
+            // ❌ Block officer from applying to project they are handling
+            controllers.UserController userController = new controllers.UserController();
+            models.User user = userController.viewUserDetails(application.getApplicantNRIC());
+    
+            if (user instanceof models.HDBOfficer) {
+                models.HDBOfficer officer = (models.HDBOfficer) user;
+                if (application.getProjectId().equals(officer.getAssignedProjectId())) {
+                    System.out.println("You cannot apply to a project you are handling as an HDB Officer.");
+                    return false;
+                }
+            }
+    
             applications.add(application);
             System.out.println("Application submitted successfully: " + application.getApplicationId());
             return true;
         }
+    
         System.out.println("Cannot submit null application");
         return false;
     }
-
+    
     // Update application status
     public boolean updateApplicationStatus(String applicationId, String newStatus) {
         if (applicationId == null || newStatus == null) {

@@ -95,11 +95,16 @@ public class HDBOfficerView {
         System.out.println("         REGISTER FOR PROJECT");
         System.out.println("==========================================");
         
+            // ✅ Debug: Show current project assignment and status
+        System.out.println("DEBUG: Assigned project ID = " + officer.getAssignedProjectId());
+        System.out.println("DEBUG: Registration status = " + officer.getRegistrationStatus());
+
+
         // Check if officer is already assigned to a project
-        if (officer.getAssignedProjectId() != null) {
-            System.out.println("You are already assigned to a project.");
+        if (officer.getAssignedProjectId() != null && "Approved".equalsIgnoreCase(officer.getRegistrationStatus())) {
+            System.out.println("You are already assigned to a project: " + officer.getAssignedProjectId());
             return;
-        }
+        }        
         
         // Display available projects
         List<Project> projects = projectController.viewAllProjects();
@@ -177,6 +182,10 @@ public class HDBOfficerView {
         
         Project project = officerController.viewAssignedProject(officer.getNric());
         
+        if (project == null) {
+            System.out.println("Assigned project not found in the system.");
+            return;
+        }
         System.out.println("Project ID: " + project.getProjectId());
         System.out.println("Name: " + project.getProjectName());
         System.out.println("Neighborhood: " + project.getNeighborhood());

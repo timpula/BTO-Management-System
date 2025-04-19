@@ -4,6 +4,8 @@ import controllers.UserController;
 import controllers.ProjectController;
 import models.User;
 import models.Project;
+import models.Applicant;
+import models.HDBManager;
 import models.HDBOfficer;
 
 import java.io.BufferedReader;
@@ -21,6 +23,10 @@ public class CSVReader {
     private static final SimpleDateFormat excelDateFormat = new SimpleDateFormat("dd/MM/yyyy");
     private static final CSVFilePaths filePaths = new CSVFilePaths();
 
+    // ✅ Shared instances
+    private static final UserController userController = new UserController();
+    private static final ProjectController projectController = new ProjectController();
+
     /**
      * Initializes the system by reading data from CSV files.
      *
@@ -28,12 +34,10 @@ public class CSVReader {
      */
     public static boolean initializeSystem() {
         try {
-            // Load users
             loadUsers(filePaths.getApplicantListFilePath(), "Applicant");
             loadUsers(filePaths.getOfficerListFilePath(), "HDBOfficer");
             loadUsers(filePaths.getManagerListFilePath(), "HDBManager");
 
-            // Load projects
             loadProjects(filePaths.getProjectListFilePath());
 
             System.out.println("System initialized successfully.");
@@ -46,43 +50,48 @@ public class CSVReader {
 
     /**
      * Loads users from a CSV file and adds them to the UserController.
-     *
-     * @param filePath The path to the CSV file.
-     * @param userType The type of user ("Applicant", "HDBOfficer", "HDBManager").
-     * @throws IOException If an error occurs while reading the file.
      */
     private static void loadUsers(String filePath, String userType) throws IOException {
         BufferedReader reader = new BufferedReader(new FileReader(filePath));
-        String line = reader.readLine(); // Skip the header
-        UserController userController = new UserController();
+        String line = reader.readLine(); // Skip header
+
         while ((line = reader.readLine()) != null) {
             String[] data = line.split(",");
-            String name = data[0];
-            String nric = data[1];
-            int age = Integer.parseInt(data[2]);
-            String maritalStatus = data[3];
-            String password = data[4];
+            String name = data[0].trim();
+            String nric = data[1].trim();
+            int age = Integer.parseInt(data[2].trim());
+            String maritalStatus = data[3].trim();
+            String password = data[4].trim();
 
-            User user = new User(nric, name, password, userType, age, maritalStatus);
+            User user;
+            switch (userType) {
+                case "Applicant":
+                    user = new Applicant(nric, name, password, age, maritalStatus);
+                    break;
+                case "HDBOfficer":
+                    user = new HDBOfficer(nric, name, password, age, maritalStatus);
+                    break;
+                case "HDBManager":
+                    user = new HDBManager(nric, name, password, age, maritalStatus);
+                    break;
+                default:
+                    user = new User(nric, name, password, userType, age, maritalStatus);
+            }
+
             userController.addUser(user);
-            System.out.println("Loaded user: " + name + " (" + userType + ")");
+            System.out.println("DEBUG: Loaded user: " + name + " (" + userType + ")");
         }
+
         reader.close();
         System.out.println("Loaded users from: " + filePath);
     }
 
     /**
-     * Loads projects from a CSV file and adds them to the ProjectController.
-     * Also auto-assigns officers (by name) from the Officer column and decrements available slots.
-     *
-     * @param filePath The path to the CSV file.
-     * @throws IOException If an error occurs while reading the file.
+     * Loads projects from a CSV file and assigns officers.
      */
     private static void loadProjects(String filePath) throws IOException {
         BufferedReader reader = new BufferedReader(new FileReader(filePath));
-        String line = reader.readLine(); // Skip the header
-        ProjectController projectController = new ProjectController();
-        UserController userController = new UserController();
+        String line = reader.readLine(); // Skip header
 
         while ((line = reader.readLine()) != null) {
             String[] data = line.split(",");
@@ -104,9 +113,17 @@ public class CSVReader {
             String closingDate = data[9];
             String manager = data[10];
             int officerSlots = Integer.parseInt(data[11]);
-            String officerList = data[12]; // Officer names (comma-separated)
+            // ✅ Collect officer names from index 12 onward
+            StringBuilder officerListBuilder = new StringBuilder();
+            for (int i = 12; i < data.length; i++) {
+                String officer = data[i].replace("\"", "").trim();
+                if (!officer.isEmpty()) {
+                    officerListBuilder.append(officer).append(",");
+                }
+            }
+            String officerList = officerListBuilder.toString().replaceAll(",$", "");
+            System.out.println("DEBUG (Raw CSV): officerList = [" + officerList + "]");
 
-            // Add 2 flat types as separate projects
             String[] flatTypes = {type1, type2};
             int[] unitCounts = {unitsType1, unitsType2};
 
@@ -133,28 +150,35 @@ public class CSVReader {
 
                 boolean created = projectController.createProject(project);
 
-                if (created) {
-                    // Auto-assign officers based on names
+                if (created && officerList != null && !officerList.trim().isEmpty()) {
                     for (String officerName : officerList.split(",")) {
-                        officerName = officerName.trim();
+                        officerName = officerName.trim().replace("\"", "");
+                
                         if (!officerName.isEmpty()) {
+                            System.out.println("DEBUG: Looking for officer: " + officerName);
+                
                             User user = userController.viewUserDetails(officerName);
-                            if (user instanceof HDBOfficer) {
-                                HDBOfficer officer = (HDBOfficer) user;
-                                officer.setAssignedProjectId(project.getProjectId());
-                                officer.setRegistrationStatus("Approved");
-
-                                // Decrease available officer slot
-                                int currentSlots = project.getAvailableOfficerSlots();
-                                project.setAvailableOfficerSlots(Math.max(0, currentSlots - 1));
-
-                                System.out.println("Auto-assigned officer " + officerName + " to " + project.getProjectName());
+                            if (user != null) {
+                                System.out.println("? Matched user: " + user.getName() + " [" + user.getNric() + "]");
+                
+                                if (user instanceof HDBOfficer) {
+                                    HDBOfficer officer = (HDBOfficer) user;
+                                    officer.setAssignedProjectId(project.getProjectId());
+                                    officer.setRegistrationStatus("Approved");
+                
+                                    int currentSlots = project.getAvailableOfficerSlots();
+                                    project.setAvailableOfficerSlots(Math.max(0, currentSlots - 1));
+                
+                                    System.out.println("✅ Auto-assigned officer " + officer.getName() + " to " + project.getProjectName());
+                                } else {
+                                    System.err.println("❌ User matched but is not an HDBOfficer: " + user.getName());
+                                }
                             } else {
-                                System.err.println("Officer not found or wrong type: " + officerName);
+                                System.out.println("❌ No user matched for: [" + officerName + "]");
                             }
                         }
                     }
-                }
+                }                
             }
         }
 

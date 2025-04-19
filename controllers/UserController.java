@@ -4,64 +4,75 @@ import models.User;
 import models.Applicant;
 import models.HDBManager;
 import models.HDBOfficer;
-import models.Project; // Assuming Project is a class in models package
+import models.Project;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class UserController {
-    private static List<User> users = new ArrayList<>(); // Simulating a database of users
+    private static List<User> users = new ArrayList<>(); // Shared user list
     private User currentUser = null;
 
+    // Get the currently logged in user
     public User getCurrentUser() {
         return currentUser;
     }
 
+    // ✅ Fixed: Login reuses actual stored object (e.g. HDBOfficer with assignedProjectId)
     public User login(String nric, String password) {
-        User user = findUserByNric(nric); // Use the helper method to find the user
-    
+        User user = findUserByNric(nric);
+
         if (user != null && user.getPassword().equals(password)) {
-            // Convert the user to the appropriate subclass based on userType
             switch (user.getUserType()) {
                 case "Applicant":
-                    currentUser = new Applicant(user.getNric(), user.getName(), user.getPassword(),
-                            user.getAge(), user.getMaritalStatus());
+                    currentUser = (Applicant) user;
                     break;
                 case "HDBOfficer":
-                    currentUser = new HDBOfficer(user.getNric(), user.getName(), user.getPassword(),
-                            user.getAge(), user.getMaritalStatus());
+                    currentUser = (HDBOfficer) user;
                     break;
                 case "HDBManager":
-                    currentUser = new HDBManager(user.getNric(), user.getName(), user.getPassword(),
-                            user.getAge(), user.getMaritalStatus());
+                    currentUser = (HDBManager) user;
                     break;
                 default:
-                    currentUser = null;
+                    currentUser = user;
                     break;
             }
             System.out.println("Login successful for user: " + currentUser.getName() + " (" + currentUser.getUserType() + ")");
             return currentUser;
         }
+
         System.out.println("Login failed for user: " + nric);
-        return null; // Login failed
+        return null;
     }
 
-    // Helper method to find a user by NRIC
+    // Find user by NRIC (internal use)
     private User findUserByNric(String nric) {
         for (User user : users) {
-            if (user.getNric().equals(nric)) {
+            if (user.getNric().equalsIgnoreCase(nric)) {
                 return user;
             }
         }
         return null;
     }
 
-    // Logout
+    // ✅ Lookup user by NRIC or Name
+    public User viewUserDetails(String input) {
+        for (User user : users) {
+            if (user.getNric().equalsIgnoreCase(input) || user.getName().equalsIgnoreCase(input)) {
+                System.out.println("✅ Matched user: " + user.getName() + " [" + user.getNric() + "]");
+                return user;
+            }
+        }
+        System.out.println("❌ User not found by: " + input);
+        return null;
+    }
+
+    // Logout user
     public void logout(String nric) {
         System.out.println("User " + nric + " has logged out.");
     }
 
-    // Update user profile
+    // Update profile details
     public boolean updateProfile(User updatedUser) {
         for (User user : users) {
             if (user.getNric().equals(updatedUser.getNric())) {
@@ -75,7 +86,7 @@ public class UserController {
             }
         }
         System.out.println("User not found: " + updatedUser.getNric());
-        return false; // User not found
+        return false;
     }
 
     // Change password
@@ -88,50 +99,42 @@ public class UserController {
             }
         }
         System.out.println("Password change failed for user: " + nric);
-        return false; // Password change failed
+        return false;
     }
 
-    // View user details
-    public User viewUserDetails(String nric) {
-        for (User user : users) {
-            if (user.getNric().equals(nric)) {
-                System.out.println("User details retrieved for: " + nric);
-                return user;
-            }
+    // Add user to shared list
+    public boolean addUser(User user) {
+        if (user != null) {
+            users.add(user);
+            System.out.println("✅ User added to shared list: " + user.getName() + " (" + user.getNric() + ")");
+            return true;
         }
-        System.out.println("User not found: " + nric);
-        return null; // User not found
+        System.out.println("❌ Failed to add user.");
+        return false;
     }
 
-    // Filter projects
+    // Get user by NRIC and cast if Applicant
+    public User getUserByNRIC(String nric) {
+        User user = findUserByNric(nric);
+        if (user instanceof Applicant) {
+            return (Applicant) user;
+        }
+        return user;
+    }
+
+    // Filter projects by name
     public List<Project> filterProjects(String filterCriteria) {
         List<Project> filteredProjects = new ArrayList<>();
         ProjectController projectController = new ProjectController();
-        List<Project> projects = projectController.viewAllProjects(); // Assuming this method returns all projects
+        List<Project> projects = projectController.viewAllProjects();
+
         for (Project project : projects) {
             if (project.getProjectName().toLowerCase().contains(filterCriteria.toLowerCase())) {
                 filteredProjects.add(project);
             }
         }
+
         System.out.println("Projects filtered by criteria: " + filterCriteria);
         return filteredProjects;
-    }
-
-    // Add a new user (for testing purposes)
-    public boolean addUser(User user) {
-        if (user != null) {
-            users.add(user);
-            System.out.println("User added: " + user.getNric());
-            return true;
-        }
-        System.out.println("Failed to add user.");
-        return false;
-    }
-    public User getUserByNRIC(String nric) {
-        User user = findUserByNric(nric); // Assume this retrieves a User object
-        if (user instanceof Applicant) {
-            return (Applicant) user; // Return as Applicant if applicable
-        }
-        return user; // Otherwise, return as a generic User
     }
 }

@@ -71,12 +71,14 @@ public class ProjectController {
 
     // Get project details by ID
     public Project getProjectDetails(String projectId) {
+        System.out.println("DEBUG: Looking for project ID = " + projectId);
         for (Project project : projects) {
+            System.out.println("DEBUG: Checking project ID in list = " + project.getProjectId());
             if (project.getProjectId().equals(projectId)) {
                 return project;
             }
         }
-        return null; // Return null if project not found
+        return null;
     }
 
     // Get project by name
