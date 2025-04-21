@@ -44,10 +44,11 @@ public class ApplicantView {
             System.out.println("4. Request Withdrawal");
             System.out.println("5. Submit Enquiry");
             System.out.println("6. View My Enquiries");
-            System.out.println("7. Edit Enquiry"); // New option
-            System.out.println("8. Delete Enquiry"); // New option
-            System.out.println("9. Update Profile");
-            System.out.println("10. Logout");
+            System.out.println("7. Edit Enquiry");
+            System.out.println("8. Delete Enquiry");
+            System.out.println("9. Set Project Filters"); // New option
+            System.out.println("10. Update Profile");
+            System.out.println("11. Logout");
             System.out.print("Please select an option: ");
 
             choice = scanner.nextInt();
@@ -79,39 +80,54 @@ public class ApplicantView {
                     displayDeleteEnquiry(applicant);
                     break;
                 case 9:
-                    displayUpdateProfile(applicant);
+                    displaySetFilters(applicant); // New case
                     break;
                 case 10:
+                    displayUpdateProfile(applicant);
+                    break;
+                case 11:
                     System.out.println("Logging out...");
                     return;
                 default:
                     System.out.println("Invalid option. Please try again.");
                     break;
             }
-        } while (choice != 10);
+        } while (choice != 11);
     }
 
     private void displayEligibleProjects(Applicant applicant) {
         System.out.println("\n==========================================");
         System.out.println("         ELIGIBLE PROJECTS");
         System.out.println("==========================================");
-
+    
         List<Project> eligibleProjects = applicantController.viewEligibleProjects(applicant);
-
+    
+        // Apply filters
+        String filterNeighborhood = applicant.getFilterNeighborhood();
+        String filterFlatType = applicant.getFilterFlatType();
+    
+        if (filterNeighborhood != null) {
+            eligibleProjects.removeIf(project -> !project.getNeighborhood().equalsIgnoreCase(filterNeighborhood));
+        }
+    
+        if (filterFlatType != null) {
+            eligibleProjects.removeIf(project -> !project.getFlatTypeUnits().containsKey(filterFlatType));
+        }
+    
         if (eligibleProjects.isEmpty()) {
-            System.out.println("No eligible projects found.");
+            System.out.println("No eligible projects found with the current filters.");
             return;
         }
-
+    
         System.out.println("ID\tName\tNeighborhood\tApplication Period");
-
+    
         for (Project project : eligibleProjects) {
             System.out.println(project.getProjectId() + "\t" +
                     project.getProjectName() + "\t" +
                     project.getNeighborhood() + "\t" +
                     project.getApplicationOpeningDate() + " to " +
                     project.getApplicationClosingDate());
-
+    
             System.out.println("Available Flat Types:");
             for (String flatType : project.getFlatTypeUnits().keySet()) {
                 System.out.println("- " + flatType + ": " + project.getFlatTypeUnits().get(flatType) + " units");
@@ -183,24 +199,25 @@ public class ApplicantView {
         System.out.println("\n==========================================");
         System.out.println("         APPLICATION STATUS");
         System.out.println("==========================================");
-    
+
         // Call the updated viewApplicationStatus method
         Application application = applicantController.viewApplicationStatus(applicant);
-    
+
         if (application == null) {
             System.out.println("You have no active applications.");
             return;
         }
-    
+
         // Retrieve project details for the application
         Project project = projectController.getProjectDetails(application.getProjectId());
-    
+
         // Display application details
         System.out.println("Application ID: " + application.getApplicationId());
         System.out.println("Project: " + project.getProjectName() + " (" + project.getNeighborhood() + ")");
         System.out.println("Application Date: " + application.getApplicationDate());
         System.out.println("Status: " + application.getStatus());
     }
+
     private void displayWithdrawalRequest(Applicant applicant) {
         System.out.println("\n==========================================");
         System.out.println("         WITHDRAWAL REQUEST");
@@ -238,35 +255,36 @@ public class ApplicantView {
         System.out.println("\n==========================================");
         System.out.println("         SUBMIT ENQUIRY");
         System.out.println("==========================================");
-
-        // Display available projects
-        List<Project> projects = projectController.viewAllProjects();
-
-        if (projects.isEmpty()) {
-            System.out.println("No projects available for enquiry.");
+    
+        // Retrieve eligible projects for the applicant
+        List<Project> eligibleProjects = applicantController.viewEligibleProjects(applicant);
+    
+        if (eligibleProjects.isEmpty()) {
+            System.out.println("No eligible projects available for enquiry.");
             return;
         }
-
+    
         System.out.println("Select a project for your enquiry:");
-        for (int i = 0; i < projects.size(); i++) {
-            System.out.println((i + 1) + ". " + projects.get(i).getProjectName());
+        for (int i = 0; i < eligibleProjects.size(); i++) {
+            Project project = eligibleProjects.get(i);
+            System.out.println((i + 1) + ". " + project.getProjectName() + " (" + project.getNeighborhood() + ")");
         }
-
+    
         System.out.print("Enter project number: ");
         int projectChoice = scanner.nextInt();
         scanner.nextLine(); // Consume newline
-
-        if (projectChoice < 1 || projectChoice > projects.size()) {
+    
+        if (projectChoice < 1 || projectChoice > eligibleProjects.size()) {
             System.out.println("Invalid selection.");
             return;
         }
-
-        Project selectedProject = projects.get(projectChoice - 1);
-
+    
+        Project selectedProject = eligibleProjects.get(projectChoice - 1);
+    
         // Get enquiry content
         System.out.println("Enter your enquiry about " + selectedProject.getProjectName() + ":");
         String content = scanner.nextLine();
-
+    
         // Create and submit enquiry
         Enquiry enquiry = new Enquiry();
         enquiry.setEnquiryId("ENQ" + System.currentTimeMillis());
@@ -274,9 +292,9 @@ public class ApplicantView {
         enquiry.setProjectId(selectedProject.getProjectId());
         enquiry.setContent(content);
         enquiry.setEnquiryDate(new java.util.Date());
-
+    
         boolean success = enquiryController.createEnquiry(enquiry);
-
+    
         if (success) {
             System.out.println("Enquiry submitted successfully!");
         } else {
@@ -319,84 +337,84 @@ public class ApplicantView {
         System.out.println("\n==========================================");
         System.out.println("         EDIT ENQUIRY");
         System.out.println("==========================================");
-    
+
         // Retrieve all enquiries for the applicant
         List<Enquiry> enquiries = enquiryController.viewEnquiries(applicant.getNric());
-    
+
         if (enquiries.isEmpty()) {
             System.out.println("You have no enquiries to edit.");
             return;
         }
-    
+
         // Display enquiries
         for (int i = 0; i < enquiries.size(); i++) {
             Enquiry enquiry = enquiries.get(i);
             System.out.println((i + 1) + ". " + enquiry.getContent() + " (Project: " + enquiry.getProjectId() + ")");
         }
-    
+
         System.out.print("Select an enquiry to edit (enter number): ");
         int choice = scanner.nextInt();
         scanner.nextLine(); // Consume newline
-    
+
         if (choice < 1 || choice > enquiries.size()) {
             System.out.println("Invalid selection.");
             return;
         }
-    
+
         Enquiry selectedEnquiry = enquiries.get(choice - 1);
-    
+
         // Prompt for new content
         System.out.println("Current Content: " + selectedEnquiry.getContent());
         System.out.print("Enter new content: ");
         String newContent = scanner.nextLine();
-    
+
         // Update the enquiry
         boolean success = enquiryController.editEnquiry(selectedEnquiry.getEnquiryId(), newContent);
-    
+
         if (success) {
             System.out.println("Enquiry updated successfully!");
         } else {
             System.out.println("Failed to update enquiry. Please try again later.");
         }
     }
-    
+
     private void displayDeleteEnquiry(Applicant applicant) {
         System.out.println("\n==========================================");
         System.out.println("         DELETE ENQUIRY");
         System.out.println("==========================================");
-    
+
         // Retrieve all enquiries for the applicant
         List<Enquiry> enquiries = enquiryController.viewEnquiries(applicant.getNric());
-    
+
         if (enquiries.isEmpty()) {
             System.out.println("You have no enquiries to delete.");
             return;
         }
-    
+
         // Display enquiries
         for (int i = 0; i < enquiries.size(); i++) {
             Enquiry enquiry = enquiries.get(i);
             System.out.println((i + 1) + ". " + enquiry.getContent() + " (Project: " + enquiry.getProjectId() + ")");
         }
-    
+
         System.out.print("Select an enquiry to delete (enter number): ");
         int choice = scanner.nextInt();
         scanner.nextLine(); // Consume newline
-    
+
         if (choice < 1 || choice > enquiries.size()) {
             System.out.println("Invalid selection.");
             return;
         }
-    
+
         Enquiry selectedEnquiry = enquiries.get(choice - 1);
-    
+
         // Confirm deletion
         System.out.print("Are you sure you want to delete this enquiry? (Y/N): ");
         String confirm = scanner.nextLine();
-    
+
         if (confirm.equalsIgnoreCase("Y")) {
             boolean success = enquiryController.deleteEnquiry(selectedEnquiry.getEnquiryId());
-    
+
             if (success) {
                 System.out.println("Enquiry deleted successfully!");
             } else {
@@ -406,6 +424,22 @@ public class ApplicantView {
             System.out.println("Deletion cancelled.");
         }
     }
+
+    private void displaySetFilters(Applicant applicant) {
+    System.out.println("\n==========================================");
+    System.out.println("         SET PROJECT FILTERS");
+    System.out.println("==========================================");
+
+    System.out.print("Enter neighborhood to filter by (leave blank for no filter): ");
+    String neighborhood = scanner.nextLine();
+    applicant.setFilterNeighborhood(neighborhood.isEmpty() ? null : neighborhood);
+
+    System.out.print("Enter flat type to filter by (e.g., 2-Room, 3-Room; leave blank for no filter): ");
+    String flatType = scanner.nextLine();
+    applicant.setFilterFlatType(flatType.isEmpty() ? null : flatType);
+
+    System.out.println("Filters updated successfully!");
+}
 
     private void displayUpdateProfile(Applicant applicant) {
         System.out.println("\n==========================================");

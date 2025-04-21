@@ -16,7 +16,7 @@ public class ProjectController {
             String projectId = String.format("PRJ%02d", projectCounter);
             project.setProjectId(projectId);
 
-            // Increment the counter for the next project
+            // Increment the counter for the next project 
             projectCounter++;
 
             // Add the project to the list
