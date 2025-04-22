@@ -3,9 +3,15 @@ package controllers;
 import models.Application;
 import java.util.ArrayList;
 import java.util.List;
+import controllers.ProjectController;
+import models.Project;
+import java.util.Map;
+
 
 public class ApplicationController {
     private static List<Application> applications = new ArrayList<>(); // Simulating a database
+    // for adjusting flat availability on approvals/withdrawals
+    private ProjectController projectController = new ProjectController();
 
     // ✅ Helper method to check if an officer is applying to their own project
     private boolean isOfficerApplyingToOwnProject(Application application) {
@@ -61,6 +67,32 @@ public class ApplicationController {
             if (application.getApplicationId().equals(applicationId)) {
                 // Validate status transition
                 if (isValidStatusTransition(application.getStatus(), newStatus)) {
+                    // --- BEGIN: enforce flat‐unit availability on approval ---
+                    if (application.getStatus().equals("Pending") && newStatus.equals("Successful")) {
+                        Project proj = projectController.getProjectDetails(application.getProjectId());
+                        Map<String,Integer> units = proj.getFlatTypeUnits();
+                        int avail = units.get(application.getFlatType());
+                        if (avail <= 0) {
+                            System.out.println("Error: No units available for flat type " + application.getFlatType());
+                            return false;
+                        }
+                        units.put(application.getFlatType(), avail - 1);
+                        projectController.editProject(proj.getProjectId(), proj);
+                    }
+                    // --- END: enforce flat‐unit availability on approval ---
+
+                    // --- BEGIN: restore units on withdrawal via updateStatus ---
+                    if (!application.getStatus().equals("Withdrawn") && newStatus.equals("Withdrawn")) {
+                        // only restore if it was previously “Successful”
+                        if (application.getStatus().equals("Successful")) {
+                            Project proj = projectController.getProjectDetails(application.getProjectId());
+                            Map<String,Integer> units = proj.getFlatTypeUnits();
+                            units.put(application.getFlatType(), units.get(application.getFlatType()) + 1);
+                            projectController.editProject(proj.getProjectId(), proj);
+                        }
+                    }
+                    // --- END: restore units on withdrawal via updateStatus ---
+
                     application.setStatus(newStatus);
                     System.out.println("Application " + applicationId + " status updated to: " + newStatus);
                     return true;
@@ -212,6 +244,14 @@ public class ApplicationController {
             if (application.getApplicationId().equals(applicationId)) {
                 // Only allow withdrawal if status is Pending or Successful
                 if (application.getStatus().equals("Pending") || application.getStatus().equals("Successful")) {
+                    // --- restore a unit if this was already “Successful” ---
+                    if (application.getStatus().equals("Successful")) {
+                        Project proj = projectController.getProjectDetails(application.getProjectId());
+                        Map<String,Integer> units = proj.getFlatTypeUnits();
+                        units.put(application.getFlatType(), units.get(application.getFlatType()) + 1);
+                        projectController.editProject(proj.getProjectId(), proj);
+                    }
+
                     application.setStatus("Withdrawn");
                     System.out.println("Application withdrawn: " + applicationId);
                     return true;

@@ -50,7 +50,8 @@ public class HDBManagerView {
             System.out.println("5. Approve Withdrawal Requests");
             System.out.println("6. Generate Reports");
             System.out.println("7. Update Profile");
-            System.out.println("8. Logout");
+            System.out.println("8. View All Projects");
+            System.out.println("9. Logout");
             System.out.print("Please select an option: ");
 
             choice = scanner.nextInt();
@@ -79,13 +80,16 @@ public class HDBManagerView {
                     displayUpdateProfile(manager);
                     break;
                 case 8:
+                    displayAllProjects();
+                    break;
+                case 9:
                     System.out.println("Logging out...");
                     return;
                 default:
                     System.out.println("Invalid option. Please try again.");
                     break;
             }
-        } while (choice != 8);
+        } while (choice != 9);
     }
 
     private void displayCreateProject(HDBManager manager) {
@@ -159,7 +163,7 @@ public class HDBManagerView {
             System.out.print("Enter number of HDB officer slots: ");
             int officerSlots = scanner.nextInt();
             scanner.nextLine(); // Consume newline
-            if (officerSlots <= 0) {
+            if (officerSlots < 1 || officerSlots > 10) {
                 throw new IllegalArgumentException("Number of officer slots must be greater than zero.");
             }
             newProject.setTotalOfficerSlots(officerSlots);
@@ -887,4 +891,21 @@ public class HDBManagerView {
                 return;
         }
     }
+
+    private void displayAllProjects() {
+        System.out.println("\n=== ALL PROJECTS ===");
+        List<Project> all = projectController.viewAllProjects();
+        for (Project p : all) {
+            System.out.printf("%s | %s | %s to %s | Slots %d/%d | %s\n",
+                p.getProjectId(),
+                p.getProjectName(),
+                new SimpleDateFormat("dd/MM/yyyy").format(p.getApplicationOpeningDate()),
+                new SimpleDateFormat("dd/MM/yyyy").format(p.getApplicationClosingDate()),
+                p.getAvailableOfficerSlots(),
+                p.getTotalOfficerSlots(),
+                p.isVisible() ? "Visible" : "Hidden");
+        }
+        return;
+    }
+    
 }
