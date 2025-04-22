@@ -6,13 +6,14 @@ import models.Applicant;
 import java.util.ArrayList;
 import java.util.List;
 
-public class ApplicantController {
+public class ApplicantController implements IChangePassword, IFilter {
 
     private ApplicationController applicationController;
     private UserController userController;
     private ProjectController projectController;
 
-    public ApplicantController(ApplicationController applicationController, UserController userController, ProjectController projectController) {
+    public ApplicantController(ApplicationController applicationController, UserController userController,
+            ProjectController projectController) {
         this.applicationController = applicationController;
         this.userController = userController;
         this.projectController = projectController;
@@ -107,7 +108,6 @@ public class ApplicantController {
         boolean saved = saveApplication(application);
 
         if (saved) {
-            System.out.println("Application submitted successfully for Applicant: " + applicant.getName());
             return true;
         }
         return false;
@@ -208,25 +208,37 @@ public class ApplicantController {
         return applicant != null ? applicant.getFilterFlatType() : null;
     }
 
-    // Get filtered projects for an applicant
-    public List<Project> getFilteredProjects(String nric) {
+    @Override
+    public boolean changePassword(String nric, String currentPassword, String newPassword) {
+        Applicant applicant = (Applicant) userController.getUserByNRIC(nric);
+        if (applicant != null && applicant.getPassword().equals(currentPassword)) {
+            applicant.setPassword(newPassword);
+            return true;
+        }
+        return false;
+    }
+
+    @Override
+    public List<Project> filterProjects(String nric) {
+        // Retrieve the current applicant
         Applicant applicant = getApplicantByNRIC(nric);
         if (applicant == null) {
-            return new ArrayList<>();
-        }
-        
-        List<Project> eligibleProjects = viewEligibleProjects(nric);
-        String filterNeighborhood = applicant.getFilterNeighborhood();
-        String filterFlatType = applicant.getFilterFlatType();
-        
-        if (filterNeighborhood != null) {
-            eligibleProjects.removeIf(project -> !project.getNeighborhood().equalsIgnoreCase(filterNeighborhood));
+            System.out.println("No applicant found for the current user.");
+            return new ArrayList<>(); // Return an empty list if no applicant is found
         }
 
-        if (filterFlatType != null) {
-            eligibleProjects.removeIf(project -> !project.getFlatTypeUnits().containsKey(filterFlatType));
-        }
-        
-        return eligibleProjects;
+        // Retrieve all projects
+        List<Project> allProjects = projectController.viewAllProjects();
+
+        // Retrieve filters from the applicant
+        String filterNeighborhood = applicant.getFilterNeighborhood();
+        String filterFlatType = applicant.getFilterFlatType();
+
+        // Filter projects based on the applicant's filters
+        return allProjects.stream()
+                .filter(project -> filterNeighborhood == null
+                        || project.getNeighborhood().equalsIgnoreCase(filterNeighborhood))
+                .filter(project -> filterFlatType == null || project.getFlatTypeUnits().containsKey(filterFlatType))
+                .toList(); // Collect the filtered projects into a list
     }
 }

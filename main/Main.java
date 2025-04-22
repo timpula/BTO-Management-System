@@ -34,7 +34,6 @@ public class Main {
             }
 
             System.out.println("Login successful! Welcome, " + authenticatedUser.getName() + ".");
-            System.out.println("User Type: " + authenticatedUser.getUserType());
 
             // Redirect to the appropriate dashboard
             LoginView loginView = new LoginView();

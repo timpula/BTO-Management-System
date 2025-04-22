@@ -6,7 +6,7 @@ import models.*;
 import java.util.List;
 import java.util.Scanner;
 
-public class ApplicantView implements IChangePassword{
+public class ApplicantView{
     private Scanner scanner;
     private ApplicantController applicantController;
     private UserController userController;
@@ -85,7 +85,7 @@ public class ApplicantView implements IChangePassword{
                     break;
                 case 10:
                     changePassword();
-                    break;
+                    return;
                 case 11:
                     System.out.println("Logging out...");
                     return;
@@ -100,24 +100,24 @@ public class ApplicantView implements IChangePassword{
         System.out.println("\n==========================================");
         System.out.println("         ELIGIBLE PROJECTS");
         System.out.println("==========================================");
-
+    
         // Get filtered projects through the controller
-        List<Project> eligibleProjects = applicantController.getFilteredProjects(currentUserNRIC);
-
-        if (eligibleProjects.isEmpty()) {
+        List<Project> eligibleProjects = applicantController.filterProjects(currentUserNRIC);
+    
+        if (eligibleProjects == null || eligibleProjects.isEmpty()) {
             System.out.println("No eligible projects found with the current filters.");
             return;
         }
-
+    
         System.out.println("ID\tName\tNeighborhood\tApplication Period");
-
+    
         for (Project project : eligibleProjects) {
             System.out.println(project.getProjectId() + "\t" +
                     project.getProjectName() + "\t" +
                     project.getNeighborhood() + "\t" +
                     project.getApplicationOpeningDate() + " to " +
                     project.getApplicationClosingDate());
-
+    
             System.out.println("Available Flat Types:");
             for (String flatType : project.getFlatTypeUnits().keySet()) {
                 System.out.println("- " + flatType + ": " + project.getFlatTypeUnits().get(flatType) + " units");
@@ -436,13 +436,15 @@ public class ApplicantView implements IChangePassword{
         System.out.print("Enter new password: ");
         String newPassword = scanner.nextLine();
 
-        // Delegate password change to the UserController
-        boolean changed = userController.changePassword(currentUserNRIC, currentPassword, newPassword);
+        boolean changed = applicantController.changePassword(currentUserNRIC, currentPassword, newPassword);
 
         if (changed) {
             System.out.println("Password changed successfully!");
+            System.out.println("You will now be logged out for security reasons.");
         } else {
             System.out.println("Failed to change password. Please check your current password.");
         }
     }
+
+
 }

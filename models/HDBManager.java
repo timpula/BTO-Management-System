@@ -1,13 +1,13 @@
 package models;
 
-import views.IFilter;
+
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 
 
-public class HDBManager extends User implements IFilter{
+
+public class HDBManager extends User {
     private List<String> createdProjects;
     private String currentProject;
 
@@ -39,11 +39,6 @@ public class HDBManager extends User implements IFilter{
         this.currentProject = currentProject;
     }
 
-    @Override
-    public List<Project> filterProjects(List<Project> projects) {
-        return projects.stream()
-                .filter(project -> project.getCreatorNRIC().equals(this.getNric()))
-                .collect(Collectors.toList());
-    }
+
 
 }

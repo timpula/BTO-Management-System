@@ -37,7 +37,6 @@ public class UserController {
                     currentUser = user;
                     break;
             }
-            System.out.println("Login successful for user: " + currentUser.getName() + " (" + currentUser.getUserType() + ")");
             return currentUser;
         }
 
@@ -55,11 +54,10 @@ public class UserController {
         return null;
     }
 
-    // ✅ Lookup user by NRIC or Name
+    // Lookup user by NRIC or Name
     public User viewUserDetails(String input) {
         for (User user : users) {
             if (user.getNric().equalsIgnoreCase(input) || user.getName().equalsIgnoreCase(input)) {
-                System.out.println("✅ Matched user: " + user.getName() + " [" + user.getNric() + "]");
                 return user;
             }
         }

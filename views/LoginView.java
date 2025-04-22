@@ -14,7 +14,6 @@ public class LoginView {
         }
 
         String userType = user.getUserType();
-        System.out.println("User Type: " + userType);
 
         switch (userType) {
             case "Applicant":

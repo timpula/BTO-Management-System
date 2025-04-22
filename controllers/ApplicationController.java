@@ -34,7 +34,7 @@ public class ApplicationController {
                 return false;
             }
 
-            // ✅ Block officer from applying to project they are handling
+            // Block officer from applying to project they are handling
             if (isOfficerApplyingToOwnProject(application)) {
                 System.out.println("You cannot apply to a project you are handling as an HDB Officer.");
                 return false;
