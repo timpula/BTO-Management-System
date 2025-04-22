@@ -201,66 +201,67 @@ public class HDBOfficerView {
         System.out.println("\n==========================================");
         System.out.println("         PROCESS APPLICATIONS");
         System.out.println("==========================================");
-        
+    
         if (officer.getAssignedProjectId() == null || !officer.getRegistrationStatus().equals("Approved")) {
             System.out.println("You are not assigned to any project yet.");
             return;
         }
-        
+    
         List<Application> applications = applicationController.getApplicationsByProject(officer.getAssignedProjectId());
-        
+    
         if (applications.isEmpty()) {
             System.out.println("No applications to process.");
             return;
         }
-        
+    
         System.out.println("Pending Applications:");
         List<Application> pendingApplications = applications.stream()
             .filter(a -> a.getStatus().equals("Pending"))
+            .filter(a -> !a.getApplicantNRIC().equals(officer.getNric())) // 🔒 Skip officer's own application
             .collect(java.util.stream.Collectors.toList());
-        
+    
         if (pendingApplications.isEmpty()) {
             System.out.println("No pending applications to process.");
             return;
         }
-        
+    
         for (int i = 0; i < pendingApplications.size(); i++) {
             Application app = pendingApplications.get(i);
             Applicant applicant = (Applicant) officerController.retrieveApplicantByNRIC(app.getApplicantNRIC());
-            
+    
             System.out.println((i + 1) + ". Application ID: " + app.getApplicationId());
             System.out.println("   Applicant: " + applicant.getName() + " (NRIC: " + applicant.getNric() + ")");
             System.out.println("   Age: " + applicant.getAge() + ", Marital Status: " + applicant.getMaritalStatus());
             System.out.println("   Application Date: " + app.getApplicationDate());
             System.out.println();
         }
-        
+    
         System.out.print("Select an application to process (enter number): ");
         int appChoice = scanner.nextInt();
         scanner.nextLine(); // Consume newline
-        
+    
         if (appChoice < 1 || appChoice > pendingApplications.size()) {
             System.out.println("Invalid selection.");
             return;
         }
-        
+    
         Application selectedApp = pendingApplications.get(appChoice - 1);
         Applicant applicant = (Applicant) officerController.retrieveApplicantByNRIC(selectedApp.getApplicantNRIC());
-        
+    
         System.out.println("\nApplication Details:");
         System.out.println("Applicant: " + applicant.getName() + " (NRIC: " + applicant.getNric() + ")");
         System.out.println("Age: " + applicant.getAge() + ", Marital Status: " + applicant.getMaritalStatus());
-        
+    
         System.out.println("\nSelect action:");
         System.out.println("1. Update Status to Successful");
         System.out.println("2. Update Status to Unsuccessful");
         System.out.println("3. Generate Booking Receipt");
         System.out.println("4. Back to Dashboard");
         System.out.print("Enter your choice: ");
-        
+    
         int actionChoice = scanner.nextInt();
         scanner.nextLine(); // Consume newline
-        
+    
         switch (actionChoice) {
             case 1:
                 boolean success = officerController.updateApplicationStatus(selectedApp.getApplicationId(), "Successful");
@@ -293,7 +294,7 @@ public class HDBOfficerView {
                 System.out.println("Invalid option.");
                 break;
         }
-    }
+    }    
 
     private void displayManageFlats(HDBOfficer officer) {
         System.out.println("\n==========================================");
@@ -482,49 +483,56 @@ public class HDBOfficerView {
         System.out.println("\n==========================================");
         System.out.println("         SEARCH APPLICANT BY NRIC");
         System.out.println("==========================================");
-        
+    
         if (officer.getAssignedProjectId() == null || !officer.getRegistrationStatus().equals("Approved")) {
             System.out.println("You are not assigned to any project yet.");
             return;
         }
-        
+    
         System.out.print("Enter applicant's NRIC: ");
-        String nric = scanner.nextLine();
-        
+        String nric = scanner.nextLine().trim();
+    
+        // 🔒 Prevent officer from searching their own NRIC
+        if (officer.getNric().equals(nric)) {
+            System.out.println("You cannot search for your own application.");
+            return;
+        }
+    
         Applicant applicant = (Applicant) officerController.retrieveApplicantByNRIC(nric);
-        
+    
         if (applicant == null) {
             System.out.println("No applicant found with NRIC: " + nric);
             return;
         }
-        
+    
         // Get the application for this applicant in the officer's project
         Application application = applicationController.getApplicationByApplicantAndProject(nric, officer.getAssignedProjectId());
-        
+    
         if (application == null) {
             System.out.println("This applicant has no application for your project.");
             return;
         }
-        
+    
         System.out.println("\nApplicant Details:");
         System.out.println("Name: " + applicant.getName());
         System.out.println("NRIC: " + applicant.getNric());
         System.out.println("Age: " + applicant.getAge());
         System.out.println("Marital Status: " + applicant.getMaritalStatus());
+    
         System.out.println("\nApplication Details:");
         System.out.println("Application ID: " + application.getApplicationId());
         System.out.println("Status: " + application.getStatus());
         System.out.println("Application Date: " + application.getApplicationDate());
         System.out.println("Flat Type (if selected): " + (application.getFlatType() != null ? application.getFlatType() : "Not selected yet"));
-        
+    
         System.out.println("\nWhat would you like to do?");
         System.out.println("1. Process Application");
         System.out.println("2. Back to Dashboard");
         System.out.print("Enter your choice: ");
-        
+    
         int choice = scanner.nextInt();
         scanner.nextLine(); // Consume newline
-        
+    
         if (choice == 1) {
             // Only allow processing if application is in "Successful" status
             if (application.getStatus().equals("Successful")) {
@@ -533,7 +541,7 @@ public class HDBOfficerView {
                 System.out.println("This application is not in 'Successful' status and cannot be processed for flat selection.");
             }
         }
-    }
+    }    
     
     // New method to manage flat selection
     private void displayManageFlatSelection(HDBOfficer officer) {

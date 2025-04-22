@@ -102,22 +102,14 @@ public class HDBOfficerController {
      * Retrieves an applicant by NRIC or creates a dummy if found in applications.
      */
     public Applicant retrieveApplicantByNRIC(String applicantNRIC) {
-        for (Applicant applicant : applicants) {
-            if (applicant.getNric().equals(applicantNRIC)) {
-                return applicant;
-            }
+        UserController userController = new UserController();
+        User user = userController.viewUserDetails(applicantNRIC);
+        if (user instanceof Applicant) {
+            return (Applicant) user;
         }
-
-        for (Application application : applications) {
-            if (application.getApplicantNRIC().equals(applicantNRIC)) {
-                Applicant newApplicant = new Applicant(application.getApplicantNRIC(), "Applicant Name", "password", 30, "Single");
-                applicants.add(newApplicant);
-                return newApplicant;
-            }
-        }
-
         return null;
     }
+    
 
     /**
      * Updates the remaining flat units for a project.
