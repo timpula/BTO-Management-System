@@ -1,12 +1,37 @@
 package controllers;
 
 import models.Registration;
+import models.User;
 import models.Application;
+import models.HDBManager;
 import models.Project;
 import java.util.ArrayList;
 import java.util.List;
 
-public class HDBManagerController {
+public class HDBManagerController implements IChangePassword, IFilter{
+    private UserController userController;
+    private ProjectController projectController;
+    private RegistrationController registrationController;
+    private ApplicationController applicationController;
+
+    // Dependency-injected constructor
+    public HDBManagerController(UserController uc,
+                                ProjectController pc,
+                                RegistrationController rc,
+                                ApplicationController ac) {
+        this.userController = uc;
+        this.projectController = pc;
+        this.registrationController = rc;
+        this.applicationController = ac;
+    }
+
+    // Default constructor for backward compatibility
+    public HDBManagerController() {
+        this(new UserController(),
+             new ProjectController(),
+             new RegistrationController(),
+             new ApplicationController());
+    }
 
     private static List<Registration> registrations = new ArrayList<>(); // Simulating a database of registrations
     private static List<Application> applications = new ArrayList<>(); // Simulating a database of applications
@@ -87,5 +112,30 @@ public class HDBManagerController {
             }
         }
         return filteredProjects;
+    }
+
+    //Allow an HDBManager to change their own password.
+    @Override
+    public boolean changePassword(String nric, String currentPassword, String newPassword) {
+        User user = userController.viewUserDetails(nric);
+        if (user instanceof HDBManager && user.getPassword().equals(currentPassword)) {
+            user.setPassword(newPassword);
+            return true;
+        }
+        return false;
+    }
+
+    
+    //Filter projects by the manager's NRIC (only their own projects).
+    @Override
+    public List<Project> filterProjects(String managerNric) {
+        List<Project> allProjects = projectController.viewAllProjects();
+        List<Project> filtered = new ArrayList<>();
+        for (Project p : allProjects) {
+            if (managerNric.equals(p.getCreatorNRIC())) {
+                filtered.add(p);
+            }
+        }
+        return filtered;
     }
 }
