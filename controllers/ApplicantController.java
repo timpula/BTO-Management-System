@@ -7,42 +7,98 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class ApplicantController {
-    private List<Application> applications = new ArrayList<>(); // Simulating a database
-    private ApplicationController applicationController;
 
-    public ApplicantController(ApplicationController applicationController) {
+    private ApplicationController applicationController;
+    private UserController userController;
+    private ProjectController projectController;
+
+    public ApplicantController(ApplicationController applicationController, UserController userController, ProjectController projectController) {
         this.applicationController = applicationController;
+        this.userController = userController;
+        this.projectController = projectController;
     }
 
+    // Constructor for backward compatibility
+    public ApplicantController(ApplicationController applicationController) {
+        this.applicationController = applicationController;
+        this.userController = new UserController();
+        this.projectController = new ProjectController();
+    }
+
+    // Get applicant details by NRIC
+    public Applicant getApplicantByNRIC(String nric) {
+        return (Applicant) userController.getUserByNRIC(nric);
+    }
+
+    // Get applicant name
+    public String getApplicantName(String nric) {
+        Applicant applicant = getApplicantByNRIC(nric);
+        return applicant != null ? applicant.getName() : "Unknown";
+    }
+
+    // Get applicant user type
+    public String getApplicantUserType(String nric) {
+        Applicant applicant = getApplicantByNRIC(nric);
+        return applicant != null ? applicant.getUserType() : "Unknown";
+    }
+
+    // Get applicant age
+    public int getApplicantAge(String nric) {
+        Applicant applicant = getApplicantByNRIC(nric);
+        return applicant != null ? applicant.getAge() : 0;
+    }
+
+    // Get applicant marital status
+    public String getApplicantMaritalStatus(String nric) {
+        Applicant applicant = getApplicantByNRIC(nric);
+        return applicant != null ? applicant.getMaritalStatus() : "Unknown";
+    }
+
+    // Get applicant current application
+    public Application getCurrentApplication(String nric) {
+        Applicant applicant = getApplicantByNRIC(nric);
+        if (applicant == null) {
+            System.out.println("Applicant not found.");
+            return null;
+        }
+        return applicationController.getApplicationByNRIC(nric);
+    }
+
+    // Save an application
     private boolean saveApplication(Application application) {
         return applicationController.submitApplication(application);
     }
 
     // View eligible projects for an applicant
-    public List<Project> viewEligibleProjects(Applicant applicant) {
-        List<Project> eligibleProjects = new ArrayList<>();
-        ProjectController projectController = new ProjectController();
-        List<Project> projects = projectController.viewAllProjects();
-
-        System.out.println("Total projects available: " + projects.size());
-
-        for (Project project : projects) {
-            if (checkEligibility(applicant, project)) {
-                System.out.println("Applicant is eligible for project: " + project.getProjectName());
-                eligibleProjects.add(project);
-            } else {
-                System.out.println("Applicant is NOT eligible for project: " + project.getProjectName());
-            }
+    public List<Project> viewEligibleProjects(String nric) {
+        Applicant applicant = getApplicantByNRIC(nric);
+        if (applicant == null) {
+            System.out.println("Applicant not found.");
+            return new ArrayList<>();
         }
 
+        List<Project> eligibleProjects = new ArrayList<>();
+        List<Project> projects = projectController.viewAllProjects();
+
+        for (Project project : projects) {
+            if (checkEligibility(nric, project)) {
+                eligibleProjects.add(project);
+            }
+        }
         return eligibleProjects;
     }
 
     // Apply for a project
-    public boolean applyForProject(Applicant applicant, String projectId) {
+    public boolean applyForProject(String nric, String projectId) {
+        Applicant applicant = getApplicantByNRIC(nric);
+        if (applicant == null) {
+            System.out.println("Applicant not found.");
+            return false;
+        }
+
         Application application = new Application();
         application.setApplicationId("APP" + System.currentTimeMillis());
-        application.setApplicantNRIC(applicant.getNric());
+        application.setApplicantNRIC(nric);
         application.setProjectId(projectId);
         application.setApplicationDate(new java.util.Date());
         application.setStatus("Pending");
@@ -51,37 +107,32 @@ public class ApplicantController {
         boolean saved = saveApplication(application);
 
         if (saved) {
-            // Retrieve the applicant and update their current application
-            applicant.setCurrentApplication(application.getApplicationId());
             System.out.println("Application submitted successfully for Applicant: " + applicant.getName());
             return true;
-
         }
-
         return false;
     }
 
     // View application status
-    public Application viewApplicationStatus(Applicant applicant) {
-        System.out.println("Checking application status for Applicant NRIC: " + applicant.getNric());
-    
+    public Application viewApplicationStatus(String nric) {
+        System.out.println("Checking application status for Applicant NRIC: " + nric);
+
         // Delegate to ApplicationController to get the application by NRIC
-        Application application = applicationController.getApplicationByNRIC(applicant.getNric());
-    
+        Application application = applicationController.getApplicationByNRIC(nric);
+
         if (application != null) {
             System.out.println("Active application found: " + application.getApplicationId());
             return application;
         }
-    
-        System.out.println("No active application found for Applicant NRIC: " + applicant.getNric());
+
+        System.out.println("No active application found for Applicant NRIC: " + nric);
         return null; // No active application found
     }
 
     // Request withdrawal of an application
-    public boolean requestWithdrawal(Applicant applicant, String applicationId) {
-        // Retrieve the current application of the applicant
-        Application application = applicationController.getApplicationByNRIC(applicant.getNric());
-    
+    public boolean requestWithdrawal(String nric, String applicationId) {
+        Application application = applicationController.getApplicationByNRIC(nric);
+
         if (application != null && application.getApplicationId().equals(applicationId)) {
             application.setStatus("Withdrawn"); // Update the status to "Withdrawn"
             System.out.println("Application withdrawn: " + applicationId);
@@ -93,7 +144,12 @@ public class ApplicantController {
     }
 
     // Check if an applicant is eligible for a project
-    public boolean checkEligibility(Applicant applicant, Project project) {
+    public boolean checkEligibility(String nric, Project project) {
+        Applicant applicant = getApplicantByNRIC(nric);
+        if (applicant == null) {
+            return false;
+        }
+
         for (String flatType : project.getFlatTypeUnits().keySet()) {
             boolean ageEligible = validateAgeRequirement(applicant, flatType);
             boolean maritalStatusEligible = validateMaritalStatus(applicant, flatType);
@@ -106,7 +162,7 @@ public class ApplicantController {
     }
 
     // Validate age requirement for a flat type
-    public boolean validateAgeRequirement(Applicant applicant, String flatType) {
+    private boolean validateAgeRequirement(Applicant applicant, String flatType) {
         int age = applicant.getAge();
 
         if (flatType.equals("2-Room") && age >= 35) {
@@ -118,17 +174,59 @@ public class ApplicantController {
     }
 
     // Validate marital status requirement for a flat type
-    public boolean validateMaritalStatus(Applicant applicant, String flatType) {
+    private boolean validateMaritalStatus(Applicant applicant, String flatType) {
         String maritalStatus = applicant.getMaritalStatus();
 
         if (flatType.equals("2-Room") && maritalStatus.equals("Single")) {
             return true;
         } else if (flatType.equals("3-Room") && maritalStatus.equals("Married")) {
             return true;
-        }
-        else if (flatType.equals("2-Room") && maritalStatus.equals("Married")){
+        } else if (flatType.equals("2-Room") && maritalStatus.equals("Married")) {
             return true;
         }
         return false;
+    }
+
+    // Set filters for an applicant
+    public void setFilters(String nric, String neighborhood, String flatType) {
+        Applicant applicant = getApplicantByNRIC(nric);
+        if (applicant != null) {
+            applicant.setFilterNeighborhood(neighborhood.isEmpty() ? null : neighborhood);
+            applicant.setFilterFlatType(flatType.isEmpty() ? null : flatType);
+        }
+    }
+
+    // Get filter neighborhood
+    public String getFilterNeighborhood(String nric) {
+        Applicant applicant = getApplicantByNRIC(nric);
+        return applicant != null ? applicant.getFilterNeighborhood() : null;
+    }
+
+    // Get filter flat type
+    public String getFilterFlatType(String nric) {
+        Applicant applicant = getApplicantByNRIC(nric);
+        return applicant != null ? applicant.getFilterFlatType() : null;
+    }
+
+    // Get filtered projects for an applicant
+    public List<Project> getFilteredProjects(String nric) {
+        Applicant applicant = getApplicantByNRIC(nric);
+        if (applicant == null) {
+            return new ArrayList<>();
+        }
+        
+        List<Project> eligibleProjects = viewEligibleProjects(nric);
+        String filterNeighborhood = applicant.getFilterNeighborhood();
+        String filterFlatType = applicant.getFilterFlatType();
+        
+        if (filterNeighborhood != null) {
+            eligibleProjects.removeIf(project -> !project.getNeighborhood().equalsIgnoreCase(filterNeighborhood));
+        }
+
+        if (filterFlatType != null) {
+            eligibleProjects.removeIf(project -> !project.getFlatTypeUnits().containsKey(filterFlatType));
+        }
+        
+        return eligibleProjects;
     }
 }

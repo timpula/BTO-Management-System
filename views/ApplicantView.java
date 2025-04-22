@@ -6,34 +6,35 @@ import models.*;
 import java.util.List;
 import java.util.Scanner;
 
-public class ApplicantView {
+public class ApplicantView implements IChangePassword{
     private Scanner scanner;
     private ApplicantController applicantController;
     private UserController userController;
     private ApplicationController applicationController;
     private ProjectController projectController;
     private EnquiryController enquiryController;
+    private String currentUserNRIC; // To store the current user's NRIC
 
     public ApplicantView() {
         scanner = new Scanner(System.in);
         applicationController = new ApplicationController(); // Initialize applicationController first
-        applicantController = new ApplicantController(applicationController); // Pass the initialized
-                                                                              // applicationController
         userController = new UserController();
         projectController = new ProjectController();
         enquiryController = new EnquiryController();
+        applicantController = new ApplicantController(applicationController, userController, projectController);
     }
 
-    public void displayDashboard(Applicant applicant) {
+    public void displayDashboard(String nric) {
+        this.currentUserNRIC = nric; // Store the NRIC for later use
 
         System.out.println("\n==========================================");
         System.out.println("         APPLICANT DASHBOARD");
         System.out.println("==========================================");
-        System.out.println("Welcome, " + applicant.getName() + "!");
-        System.out.println("User Type: " + applicant.getUserType());
-        System.out.println("NRIC: " + applicant.getNric());
-        System.out.println("Age: " + applicant.getAge());
-        System.out.println("Marital Status: " + applicant.getMaritalStatus());
+        System.out.println("Welcome, " + applicantController.getApplicantName(nric) + "!");
+        System.out.println("User Type: " + applicantController.getApplicantUserType(nric));
+        System.out.println("NRIC: " + nric);
+        System.out.println("Age: " + applicantController.getApplicantAge(nric));
+        System.out.println("Marital Status: " + applicantController.getApplicantMaritalStatus(nric));
         System.out.println("==========================================");
 
         int choice;
@@ -46,8 +47,8 @@ public class ApplicantView {
             System.out.println("6. View My Enquiries");
             System.out.println("7. Edit Enquiry");
             System.out.println("8. Delete Enquiry");
-            System.out.println("9. Set Project Filters"); // New option
-            System.out.println("10. Update Profile");
+            System.out.println("9. Set Project Filters");
+            System.out.println("10. Change Password");
             System.out.println("11. Logout");
             System.out.print("Please select an option: ");
 
@@ -56,34 +57,34 @@ public class ApplicantView {
 
             switch (choice) {
                 case 1:
-                    displayEligibleProjects(applicant);
+                    displayEligibleProjects();
                     break;
                 case 2:
-                    displayApplyForProject(applicant);
+                    displayApplyForProject();
                     break;
                 case 3:
-                    displayApplicationStatus(applicant);
+                    displayApplicationStatus();
                     break;
                 case 4:
-                    displayWithdrawalRequest(applicant);
+                    displayWithdrawalRequest();
                     break;
                 case 5:
-                    displaySubmitEnquiry(applicant);
+                    displaySubmitEnquiry();
                     break;
                 case 6:
-                    displayViewEnquiries(applicant);
+                    displayViewEnquiries();
                     break;
                 case 7:
-                    displayEditEnquiry(applicant);
+                    displayEditEnquiry();
                     break;
                 case 8:
-                    displayDeleteEnquiry(applicant);
+                    displayDeleteEnquiry();
                     break;
                 case 9:
-                    displaySetFilters(applicant); // New case
+                    displaySetFilters();
                     break;
                 case 10:
-                    displayUpdateProfile(applicant);
+                    changePassword();
                     break;
                 case 11:
                     System.out.println("Logging out...");
@@ -95,39 +96,28 @@ public class ApplicantView {
         } while (choice != 11);
     }
 
-    private void displayEligibleProjects(Applicant applicant) {
+    private void displayEligibleProjects() {
         System.out.println("\n==========================================");
         System.out.println("         ELIGIBLE PROJECTS");
         System.out.println("==========================================");
-    
-        List<Project> eligibleProjects = applicantController.viewEligibleProjects(applicant);
-    
-        // Apply filters
-        String filterNeighborhood = applicant.getFilterNeighborhood();
-        String filterFlatType = applicant.getFilterFlatType();
-    
-        if (filterNeighborhood != null) {
-            eligibleProjects.removeIf(project -> !project.getNeighborhood().equalsIgnoreCase(filterNeighborhood));
-        }
-    
-        if (filterFlatType != null) {
-            eligibleProjects.removeIf(project -> !project.getFlatTypeUnits().containsKey(filterFlatType));
-        }
-    
+
+        // Get filtered projects through the controller
+        List<Project> eligibleProjects = applicantController.getFilteredProjects(currentUserNRIC);
+
         if (eligibleProjects.isEmpty()) {
             System.out.println("No eligible projects found with the current filters.");
             return;
         }
-    
+
         System.out.println("ID\tName\tNeighborhood\tApplication Period");
-    
+
         for (Project project : eligibleProjects) {
             System.out.println(project.getProjectId() + "\t" +
                     project.getProjectName() + "\t" +
                     project.getNeighborhood() + "\t" +
                     project.getApplicationOpeningDate() + " to " +
                     project.getApplicationClosingDate());
-    
+
             System.out.println("Available Flat Types:");
             for (String flatType : project.getFlatTypeUnits().keySet()) {
                 System.out.println("- " + flatType + ": " + project.getFlatTypeUnits().get(flatType) + " units");
@@ -136,19 +126,20 @@ public class ApplicantView {
         }
     }
 
-    private void displayApplyForProject(Applicant applicant) {
+    private void displayApplyForProject() {
         System.out.println("\n==========================================");
         System.out.println("         APPLY FOR PROJECT");
         System.out.println("==========================================");
 
         // Check if applicant already has an active application
-        if (applicant.getCurrentApplication() != null) {
+        Application currentApplication = applicantController.getCurrentApplication(currentUserNRIC);
+        if (currentApplication != null) {
             System.out.println("You already have an active application. You can only apply for one project at a time.");
             return;
         }
 
         // Display eligible projects
-        List<Project> eligibleProjects = applicantController.viewEligibleProjects(applicant);
+        List<Project> eligibleProjects = applicantController.viewEligibleProjects(currentUserNRIC);
 
         if (eligibleProjects.isEmpty()) {
             System.out.println("No eligible projects found.");
@@ -173,7 +164,7 @@ public class ApplicantView {
         Project selectedProject = eligibleProjects.get(projectChoice - 1);
 
         // Check eligibility
-        if (!applicantController.checkEligibility(applicant, selectedProject)) {
+        if (!applicantController.checkEligibility(currentUserNRIC, selectedProject)) {
             System.out.println("Sorry, you are not eligible for this project.");
             return;
         }
@@ -184,7 +175,7 @@ public class ApplicantView {
         String confirm = scanner.nextLine();
 
         if (confirm.equalsIgnoreCase("Y")) {
-            boolean success = applicantController.applyForProject(applicant, selectedProject.getProjectId());
+            boolean success = applicantController.applyForProject(currentUserNRIC, selectedProject.getProjectId());
             if (success) {
                 System.out.println("Application submitted successfully!");
             } else {
@@ -195,13 +186,13 @@ public class ApplicantView {
         }
     }
 
-    private void displayApplicationStatus(Applicant applicant) {
+    private void displayApplicationStatus() {
         System.out.println("\n==========================================");
         System.out.println("         APPLICATION STATUS");
         System.out.println("==========================================");
 
-        // Call the updated viewApplicationStatus method
-        Application application = applicantController.viewApplicationStatus(applicant);
+        // Call the controller to get application status
+        Application application = applicantController.viewApplicationStatus(currentUserNRIC);
 
         if (application == null) {
             System.out.println("You have no active applications.");
@@ -218,12 +209,12 @@ public class ApplicantView {
         System.out.println("Status: " + application.getStatus());
     }
 
-    private void displayWithdrawalRequest(Applicant applicant) {
+    private void displayWithdrawalRequest() {
         System.out.println("\n==========================================");
         System.out.println("         WITHDRAWAL REQUEST");
         System.out.println("==========================================");
 
-        Application application = applicationController.getApplicationByNRIC(applicant.getNric());
+        Application application = applicationController.getApplicationByNRIC(currentUserNRIC);
 
         if (application == null) {
             System.out.println("You have no active applications to withdraw.");
@@ -240,7 +231,7 @@ public class ApplicantView {
         String confirm = scanner.nextLine();
 
         if (confirm.equalsIgnoreCase("Y")) {
-            boolean success = applicantController.requestWithdrawal(applicant, application.getApplicationId());
+            boolean success = applicantController.requestWithdrawal(currentUserNRIC, application.getApplicationId());
             if (success) {
                 System.out.println("Withdrawal request submitted successfully!");
             } else {
@@ -251,13 +242,13 @@ public class ApplicantView {
         }
     }
 
-    private void displaySubmitEnquiry(Applicant applicant) {
+    private void displaySubmitEnquiry() {
         System.out.println("\n==========================================");
         System.out.println("         SUBMIT ENQUIRY");
         System.out.println("==========================================");
     
         // Retrieve eligible projects for the applicant
-        List<Project> eligibleProjects = applicantController.viewEligibleProjects(applicant);
+        List<Project> eligibleProjects = applicantController.viewEligibleProjects(currentUserNRIC);
     
         if (eligibleProjects.isEmpty()) {
             System.out.println("No eligible projects available for enquiry.");
@@ -285,15 +276,8 @@ public class ApplicantView {
         System.out.println("Enter your enquiry about " + selectedProject.getProjectName() + ":");
         String content = scanner.nextLine();
     
-        // Create and submit enquiry
-        Enquiry enquiry = new Enquiry();
-        enquiry.setEnquiryId("ENQ" + System.currentTimeMillis());
-        enquiry.setUserNRIC(applicant.getNric());
-        enquiry.setProjectId(selectedProject.getProjectId());
-        enquiry.setContent(content);
-        enquiry.setEnquiryDate(new java.util.Date());
-    
-        boolean success = enquiryController.createEnquiry(enquiry);
+        // Delegate enquiry creation to the EnquiryController
+        boolean success = enquiryController.createEnquiry(currentUserNRIC, selectedProject.getProjectId(), content);
     
         if (success) {
             System.out.println("Enquiry submitted successfully!");
@@ -302,12 +286,12 @@ public class ApplicantView {
         }
     }
 
-    private void displayViewEnquiries(Applicant applicant) {
+    private void displayViewEnquiries() {
         System.out.println("\n==========================================");
         System.out.println("         MY ENQUIRIES");
         System.out.println("==========================================");
 
-        List<Enquiry> enquiries = enquiryController.viewEnquiries(applicant.getNric());
+        List<Enquiry> enquiries = enquiryController.viewEnquiries(currentUserNRIC);
 
         if (enquiries.isEmpty()) {
             System.out.println("You have no enquiries.");
@@ -333,13 +317,13 @@ public class ApplicantView {
         }
     }
 
-    private void displayEditEnquiry(Applicant applicant) {
+    private void displayEditEnquiry() {
         System.out.println("\n==========================================");
         System.out.println("         EDIT ENQUIRY");
         System.out.println("==========================================");
 
         // Retrieve all enquiries for the applicant
-        List<Enquiry> enquiries = enquiryController.viewEnquiries(applicant.getNric());
+        List<Enquiry> enquiries = enquiryController.viewEnquiries(currentUserNRIC);
 
         if (enquiries.isEmpty()) {
             System.out.println("You have no enquiries to edit.");
@@ -378,13 +362,13 @@ public class ApplicantView {
         }
     }
 
-    private void displayDeleteEnquiry(Applicant applicant) {
+    private void displayDeleteEnquiry() {
         System.out.println("\n==========================================");
         System.out.println("         DELETE ENQUIRY");
         System.out.println("==========================================");
 
         // Retrieve all enquiries for the applicant
-        List<Enquiry> enquiries = enquiryController.viewEnquiries(applicant.getNric());
+        List<Enquiry> enquiries = enquiryController.viewEnquiries(currentUserNRIC);
 
         if (enquiries.isEmpty()) {
             System.out.println("You have no enquiries to delete.");
@@ -425,99 +409,40 @@ public class ApplicantView {
         }
     }
 
-    private void displaySetFilters(Applicant applicant) {
-    System.out.println("\n==========================================");
-    System.out.println("         SET PROJECT FILTERS");
-    System.out.println("==========================================");
-
-    System.out.print("Enter neighborhood to filter by (leave blank for no filter): ");
-    String neighborhood = scanner.nextLine();
-    applicant.setFilterNeighborhood(neighborhood.isEmpty() ? null : neighborhood);
-
-    System.out.print("Enter flat type to filter by (e.g., 2-Room, 3-Room; leave blank for no filter): ");
-    String flatType = scanner.nextLine();
-    applicant.setFilterFlatType(flatType.isEmpty() ? null : flatType);
-
-    System.out.println("Filters updated successfully!");
-}
-
-    private void displayUpdateProfile(Applicant applicant) {
+    private void displaySetFilters() {
         System.out.println("\n==========================================");
-        System.out.println("         UPDATE PROFILE");
+        System.out.println("         SET PROJECT FILTERS");
         System.out.println("==========================================");
 
-        System.out.println("Current Profile:");
-        System.out.println("Name: " + applicant.getName());
-        System.out.println("Age: " + applicant.getAge());
-        System.out.println("Marital Status: " + applicant.getMaritalStatus());
+        System.out.print("Enter neighborhood to filter by (leave blank for no filter): ");
+        String neighborhood = scanner.nextLine();
 
-        System.out.println("\nWhat would you like to update?");
-        System.out.println("1. Name");
-        System.out.println("2. Age");
-        System.out.println("3. Marital Status");
-        System.out.println("4. Password");
-        System.out.println("5. Back to Dashboard");
-        System.out.print("Enter your choice: ");
+        System.out.print("Enter flat type to filter by (e.g., 2-Room, 3-Room; leave blank for no filter): ");
+        String flatType = scanner.nextLine();
 
-        int choice = scanner.nextInt();
-        scanner.nextLine(); // Consume newline
+        // Use controller to set filters
+        applicantController.setFilters(currentUserNRIC, neighborhood, flatType);
 
-        switch (choice) {
-            case 1:
-                System.out.print("Enter new name: ");
-                String newName = scanner.nextLine();
-                applicant.setName(newName);
-                break;
-            case 2:
-                System.out.print("Enter new age: ");
-                int newAge = scanner.nextInt();
-                scanner.nextLine(); // Consume newline
-                applicant.setAge(newAge);
-                break;
-            case 3:
-                System.out.println("Select marital status:");
-                System.out.println("1. Single");
-                System.out.println("2. Married");
-                System.out.print("Enter your choice: ");
-                int statusChoice = scanner.nextInt();
-                scanner.nextLine(); // Consume newline
+        System.out.println("Filters updated successfully!");
+    }
 
-                if (statusChoice == 1) {
-                    applicant.setMaritalStatus("Single");
-                } else if (statusChoice == 2) {
-                    applicant.setMaritalStatus("Married");
-                } else {
-                    System.out.println("Invalid selection.");
-                    return;
-                }
-                break;
-            case 4:
-                System.out.print("Enter current password: ");
-                String currentPassword = scanner.nextLine();
-                System.out.print("Enter new password: ");
-                String newPassword = scanner.nextLine();
+    public void changePassword() {
+        System.out.println("\n==========================================");
+        System.out.println("         CHANGE PASSWORD");
+        System.out.println("==========================================");
 
-                boolean changed = userController.changePassword(applicant.getNric(), currentPassword, newPassword);
+        System.out.print("Enter current password: ");
+        String currentPassword = scanner.nextLine();
+        System.out.print("Enter new password: ");
+        String newPassword = scanner.nextLine();
 
-                if (changed) {
-                    System.out.println("Password changed successfully!");
-                } else {
-                    System.out.println("Failed to change password. Please check your current password.");
-                }
-                return;
-            case 5:
-                return;
-            default:
-                System.out.println("Invalid option.");
-                return;
-        }
+        // Delegate password change to the UserController
+        boolean changed = userController.changePassword(currentUserNRIC, currentPassword, newPassword);
 
-        boolean updated = userController.updateProfile(applicant);
-
-        if (updated) {
-            System.out.println("Profile updated successfully!");
+        if (changed) {
+            System.out.println("Password changed successfully!");
         } else {
-            System.out.println("Failed to update profile. Please try again later.");
+            System.out.println("Failed to change password. Please check your current password.");
         }
     }
 }

@@ -22,7 +22,7 @@ public class LoginView {
                     Applicant applicant = (Applicant) user;
                     System.out.println("Redirecting to Applicant Dashboard for " + applicant.getName());
                     ApplicantView applicantView = new ApplicantView();
-                    applicantView.displayDashboard(applicant); // Pass the entire Applicant object
+                    applicantView.displayDashboard(applicant.getNric()); // Pass the entire Applicant object
                 } else {
                     System.out.println("Error: Applicant details not found.");
                 }

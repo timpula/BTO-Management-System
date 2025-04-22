@@ -72,22 +72,6 @@ public class UserController {
         System.out.println("User " + nric + " has logged out.");
     }
 
-    // Update profile details
-    public boolean updateProfile(User updatedUser) {
-        for (User user : users) {
-            if (user.getNric().equals(updatedUser.getNric())) {
-                user.setNric(updatedUser.getNric());
-                user.setName(updatedUser.getName());
-                user.setAge(updatedUser.getAge());
-                user.setMaritalStatus(updatedUser.getMaritalStatus());
-                user.setUserType(updatedUser.getUserType());
-                System.out.println("Profile updated for user: " + updatedUser.getNric());
-                return true;
-            }
-        }
-        System.out.println("User not found: " + updatedUser.getNric());
-        return false;
-    }
 
     // Change password
     public boolean changePassword(String nric, String oldPassword, String newPassword) {

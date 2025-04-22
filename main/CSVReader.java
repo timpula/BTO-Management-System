@@ -159,7 +159,7 @@ public class CSVReader {
                 
                             User user = userController.viewUserDetails(officerName);
                             if (user != null) {
-                                System.out.println("? Matched user: " + user.getName() + " [" + user.getNric() + "]");
+                                System.out.println("Matched user: " + user.getName() + " [" + user.getNric() + "]");
                 
                                 if (user instanceof HDBOfficer) {
                                     HDBOfficer officer = (HDBOfficer) user;
@@ -169,12 +169,12 @@ public class CSVReader {
                                     int currentSlots = project.getAvailableOfficerSlots();
                                     project.setAvailableOfficerSlots(Math.max(0, currentSlots - 1));
                 
-                                    System.out.println("✅ Auto-assigned officer " + officer.getName() + " to " + project.getProjectName());
+                                    System.out.println("Auto-assigned officer " + officer.getName() + " to " + project.getProjectName());
                                 } else {
-                                    System.err.println("❌ User matched but is not an HDBOfficer: " + user.getName());
+                                    System.err.println("User matched but is not an HDBOfficer: " + user.getName());
                                 }
                             } else {
-                                System.out.println("❌ No user matched for: [" + officerName + "]");
+                                System.out.println("No user matched for: [" + officerName + "]");
                             }
                         }
                     }

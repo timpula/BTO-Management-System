@@ -9,12 +9,15 @@ public class EnquiryController {
     private static List<Enquiry> enquiries = new ArrayList<>(); // Simulating a database
 
     // Create an enquiry
-    public boolean createEnquiry(Enquiry enquiry) {
-        if (enquiry != null) {
-            enquiries.add(enquiry);
-            return true;
+    public boolean createEnquiry(String userNRIC, String projectId, String content) {
+        if (userNRIC == null || projectId == null || content == null || content.isEmpty()) {
+            return false; // Validation: Ensure all fields are provided
         }
-        return false;
+    
+        String enquiryId = "ENQ" + (enquiries.size() + 1); // Generate a unique enquiry ID
+        Enquiry enquiry = new Enquiry(enquiryId, userNRIC, projectId, content, new Date());
+        enquiries.add(enquiry);
+        return true;
     }
 
     // Edit an enquiry
