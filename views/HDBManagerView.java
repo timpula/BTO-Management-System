@@ -219,7 +219,9 @@ public class HDBManagerView {
         System.out.println("         MANAGE PROJECTS");
         System.out.println("==========================================");
 
-        List<Project> projects = managerController.filterProjectsByCreator(manager.getNric());
+        // Use the IFilter method filterProjects instead of undefined filterProjectsByCreator
+        
+        List<Project> projects = managerController.filterProjects(manager.getNric());
 
         if (projects.isEmpty()) {
             System.out.println("No projects found.");

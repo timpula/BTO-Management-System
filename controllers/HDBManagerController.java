@@ -42,14 +42,29 @@ public class HDBManagerController implements IChangePassword, IFilter {
              new ApplicationController());
     }
 
+    private static List<Registration> registrations = new ArrayList<>(); // Simulating a database of registrations
+     private static List<Application> applications = new ArrayList<>(); // Simulating a database of applications
+     private static List<Project> projects = new ArrayList<>(); // Simulating a database of projects
     // --- Officer Registration Approval/Rejection ---
 
     public boolean approveOfficerRegistration(String registrationId) {
-        return registrationController.approveOfficerRegistration(registrationId);
+        for (Registration registration : registrations) {
+            if (registration.getRegistrationId().equals(registrationId) && registration.getStatus().equals("Pending")) {
+                registration.setStatus("Approved");
+                return true;
+            }
+        }
+        return false; // Registration not found or already processed 
     }
 
     public boolean rejectOfficerRegistration(String registrationId) {
-        return registrationController.rejectOfficerRegistration(registrationId);
+        for (Registration registration : registrations) {
+            if (registration.getRegistrationId().equals(registrationId) && registration.getStatus().equals("Pending")) {
+                registration.setStatus("Rejected");
+                return true;
+            }
+        }
+        return false; // Registration not found or already processed    
     }
 
     /**
@@ -61,12 +76,24 @@ public class HDBManagerController implements IChangePassword, IFilter {
 
     // --- Application Approval/Rejection ---
 
-    public boolean approveApplication(String applicationId) {
-        return applicationController.approveApplication(applicationId);
+        public boolean approveApplication(String applicationId) {
+            for (Application application : applications) {
+                if (application.getApplicationId().equals(applicationId) && application.getStatus().equals("Pending")) {
+                    application.setStatus("Approved");
+                    return true;
+                }
+            }
+            return false; // Application not found or already processed
     }
 
     public boolean rejectApplication(String applicationId) {
-        return applicationController.rejectApplication(applicationId);
+        for (Application application : applications) {
+            if (application.getApplicationId().equals(applicationId) && application.getStatus().equals("Pending")) {
+                application.setStatus("Rejected");
+                return true;
+            }
+        }
+        return false; // Application not found or already processed
     }
 
     // --- Withdrawal Request Approval/Rejection ---
