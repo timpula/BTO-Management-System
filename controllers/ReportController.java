@@ -52,16 +52,27 @@ public class ReportController {
         report.setGenerationDate(new Date());
 
         // Fetch all applications with status "Approved" or "Booked"
-        List<Application> allApps = new ArrayList<>();
-        allApps.addAll(applicationController.getApplicationsByStatus("Approved"));
-        allApps.addAll(applicationController.getApplicationsByStatus("Booked"));
+       // List<Application> allApps = new ArrayList<>();
+        //allApps.addAll(applicationController.getApplicationsByStatus("Successful"));
+        //allApps.addAll(applicationController.getApplicationsByStatus("Booked"));
+
+        List<Application> allApps = applicationController.getAllApplications().stream()
+        .filter(a ->
+            "Successful".equalsIgnoreCase(a.getStatus()) ||
+            "Booked"  .equalsIgnoreCase(a.getStatus())
+        )
+        .collect(Collectors.toList());
+
+           // debug
+            System.out.println(">>> ReportController: pulling apps by status");
+            allApps.forEach(a ->
+            System.out.println("    ["+a.getApplicationId()+"] → "+a.getStatus())
+            );
 
         // Populate report
-        for (Application app : allApps) {
-            report.addApplication(app);
-        }
+        allApps.forEach(report::addApplication);
         report.addStatistic("Total Records", report.getTotalRecords());
-
+    
         currentReport = report;
         return report;
     }

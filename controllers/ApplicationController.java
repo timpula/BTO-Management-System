@@ -6,6 +6,7 @@ import java.util.List;
 import controllers.ProjectController;
 import models.Project;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 
 public class ApplicationController {
@@ -301,4 +302,6 @@ public class ApplicationController {
     public List<Application> getAllApplications() {
         return new ArrayList<>(applications);
     }
+    
+
 }
