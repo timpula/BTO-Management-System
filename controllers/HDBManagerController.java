@@ -59,6 +59,12 @@ public class HDBManagerController implements IChangePassword, IFilter{
         return false; // Registration not found or already processed
     }
 
+    // Return all officer registrations with the given status
+    public List<Registration> viewOfficerRegistrationsByStatus(String status) {
+        return registrationController.getRegistrationsByStatus(status);
+    }
+    
+
     // Approve application
     public boolean approveApplication(String applicationId) {
         for (Application application : applications) {

@@ -479,77 +479,84 @@ public class HDBManagerView {
         System.out.println("     APPROVE OFFICER REGISTRATIONS");
         System.out.println("==========================================");
 
-        List<Registration> pendingRegistrations = registrationController.getRegistrationsByStatus("Pending");
-
-        if (pendingRegistrations.isEmpty()) {
-            System.out.println("No pending registrations found.");
-            return;
-        }
-
-        System.out.println("Pending Officer Registrations:");
-        for (int i = 0; i < pendingRegistrations.size(); i++) {
-            Registration reg = pendingRegistrations.get(i);
+    // 1) Pending registrations
+    List<Registration> pending = managerController.viewOfficerRegistrationsByStatus("Pending");
+    System.out.println("Pending Officer Registrations:");
+    if (pending.isEmpty()) {
+        System.out.println("  (none)");
+    } else {
+        for (int i = 0; i < pending.size(); i++) {
+            Registration reg = pending.get(i);
             User officer = userController.viewUserDetails(reg.getOfficerNRIC());
             Project project = projectController.getProjectDetails(reg.getProjectId());
-
-            System.out.println((i + 1) + ". Registration ID: " + reg.getRegistrationId());
-            System.out.println("   Officer: " + officer.getName() + " (NRIC: " + officer.getNric() + ")");
-            System.out.println("   Project: " + project.getProjectName() + " (" + project.getNeighborhood() + ")");
-            System.out.println("   Registration Date: " + reg.getRegistrationDate());
-            System.out.println();
-        }
-
-        System.out.print("Select a registration to process (enter number): ");
-        int regChoice = scanner.nextInt();
-        scanner.nextLine(); // Consume newline
-
-        if (regChoice < 1 || regChoice > pendingRegistrations.size()) {
-            System.out.println("Invalid selection.");
-            return;
-        }
-
-        Registration selectedReg = pendingRegistrations.get(regChoice - 1);
-        User officer = userController.viewUserDetails(selectedReg.getOfficerNRIC());
-        Project project = projectController.getProjectDetails(selectedReg.getProjectId());
-
-        System.out.println("\nRegistration Details:");
-        System.out.println("Officer: " + officer.getName() + " (NRIC: " + officer.getNric() + ")");
-        System.out.println("Project: " + project.getProjectName() + " (" + project.getNeighborhood() + ")");
-        System.out.println("Registration Date: " + selectedReg.getRegistrationDate());
-
-        System.out.println("\nSelect action:");
-        System.out.println("1. Approve Registration");
-        System.out.println("2. Reject Registration");
-        System.out.println("3. Back to Dashboard");
-        System.out.print("Enter your choice: ");
-
-        int actionChoice = scanner.nextInt();
-        scanner.nextLine(); // Consume newline
-
-        switch (actionChoice) {
-            case 1:
-                boolean approved = managerController.approveOfficerRegistration(selectedReg.getRegistrationId());
-                if (approved) {
-                    System.out.println("Registration approved successfully!");
-                } else {
-                    System.out.println("Failed to approve registration.");
-                }
-                break;
-            case 2:
-                boolean rejected = managerController.rejectOfficerRegistration(selectedReg.getRegistrationId());
-                if (rejected) {
-                    System.out.println("Registration rejected successfully!");
-                } else {
-                    System.out.println("Failed to reject registration.");
-                }
-                break;
-            case 3:
-                return;
-            default:
-                System.out.println("Invalid option.");
-                break;
+            System.out.printf("  %d) %s | %s | %s%n",
+                              i + 1,
+                              reg.getRegistrationId(),
+                              officer.getName(),
+                              project.getProjectName());
         }
     }
+
+    // 2) Approved registrations
+    List<Registration> approved = managerController.viewOfficerRegistrationsByStatus("Approved");
+    System.out.println("\nApproved Officer Registrations:");
+    if (approved.isEmpty()) {
+        System.out.println("  (none)");
+    } else {
+        for (Registration reg : approved) {
+            User officer = userController.viewUserDetails(reg.getOfficerNRIC());
+            Project project = projectController.getProjectDetails(reg.getProjectId());
+            System.out.printf("  %s | %s | %s%n",
+                              reg.getRegistrationId(),
+                              officer.getName(),
+                              project.getProjectName());
+        }
+    }
+
+    // 3) Now let the manager process any pending registration
+    if (!pending.isEmpty()) {
+        System.out.print("\nSelect a PENDING registration to process (enter number), or 0 to go back: ");
+        int choice = scanner.nextInt();
+        scanner.nextLine();
+        if (choice > 0 && choice <= pending.size()) {
+            Registration sel = pending.get(choice - 1);
+            User officer = userController.viewUserDetails(sel.getOfficerNRIC());
+            Project project = projectController.getProjectDetails(sel.getProjectId());
+
+            System.out.println("\nRegistration Details:");
+            System.out.println("Officer: " + officer.getName() + " (NRIC: " + officer.getNric() + ")");
+            System.out.println("Project: " + project.getProjectName() + " (" + project.getNeighborhood() + ")");
+            System.out.println("Registration Date: " + sel.getRegistrationDate());
+
+            System.out.println("\nSelect action:");
+            System.out.println("1. Approve Registration");
+            System.out.println("2. Reject Registration");
+            System.out.println("3. Back to Dashboard");
+            System.out.print("Enter your choice: ");
+
+            int actionChoice = scanner.nextInt();
+            scanner.nextLine();
+            switch (actionChoice) {
+                case 1:
+                    if (managerController.approveOfficerRegistration(sel.getRegistrationId())) {
+                        System.out.println("Registration approved successfully!");
+                    } else {
+                        System.out.println("Failed to approve registration.");
+                    }
+                    break;
+                case 2:
+                    if (managerController.rejectOfficerRegistration(sel.getRegistrationId())) {
+                        System.out.println("Registration rejected successfully!");
+                    } else {
+                        System.out.println("Failed to reject registration.");
+                    }
+                    break;
+                default:
+                    // back to dashboard
+            }
+        }
+    }
+}
 
     private void displayApproveApplications(HDBManager manager) {
         System.out.println("\n==========================================");
