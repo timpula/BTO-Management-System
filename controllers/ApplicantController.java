@@ -92,6 +92,16 @@ public class ApplicantController implements IChangePassword, IFilter {
 
     // Apply for a project
     public boolean applyForProject(String nric, String projectId) {
+        Project project = projectController.getProjectDetails(projectId);
+
+        // 1) derive flatType from the project’s name:
+        String rawName = project.getProjectName();
+        String flatType = "";
+        if (rawName.contains(" - ")) {
+            // split on " - " and take the last segment
+            String[] parts = rawName.split(" - ");
+            flatType = parts[parts.length - 1].trim();
+        }
         Applicant applicant = getApplicantByNRIC(nric);
         if (applicant == null) {
             System.out.println("Applicant not found.");
@@ -104,6 +114,7 @@ public class ApplicantController implements IChangePassword, IFilter {
         application.setProjectId(projectId);
         application.setApplicationDate(new java.util.Date());
         application.setStatus("Pending");
+        application.setFlatType(flatType); 
 
         // Save the application
         boolean saved = saveApplication(application);
