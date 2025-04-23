@@ -114,6 +114,8 @@ public class HDBManagerController implements IChangePassword, IFilter{
         return filteredProjects;
     }
 
+    
+
     //Allow an HDBManager to change their own password.
     @Override
     public boolean changePassword(String nric, String currentPassword, String newPassword) {
@@ -125,6 +127,10 @@ public class HDBManagerController implements IChangePassword, IFilter{
         return false;
     }
 
+    // Toggle visiblity of a project
+    public boolean toggleProjectVisibility(String projectId, boolean visibility) {
+        return projectController.toggleProjectVisibility(projectId, visibility);
+    }    
     
     //Filter projects by the manager's NRIC (only their own projects).
     @Override

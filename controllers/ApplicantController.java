@@ -234,11 +234,13 @@ public class ApplicantController implements IChangePassword, IFilter {
         String filterNeighborhood = applicant.getFilterNeighborhood();
         String filterFlatType = applicant.getFilterFlatType();
 
-        // Filter projects based on the applicant's filters
-        return allProjects.stream()
+        // Stream from all projects, but only include those that are visible
+        return projectController.viewAllProjects().stream()
+                .filter(Project::isVisible)                               // only visible projects
                 .filter(project -> filterNeighborhood == null
                         || project.getNeighborhood().equalsIgnoreCase(filterNeighborhood))
-                .filter(project -> filterFlatType == null || project.getFlatTypeUnits().containsKey(filterFlatType))
-                .toList(); // Collect the filtered projects into a list
+                .filter(project -> filterFlatType == null
+                        || project.getFlatTypeUnits().containsKey(filterFlatType))
+                .toList();
     }
 }
