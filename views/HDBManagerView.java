@@ -74,7 +74,7 @@ public class HDBManagerView {
                     displayApproveWithdrawalRequests(manager);
                     break;
                 case 6:
-                    displayGenerateReports(manager);
+                    displayGenerateReport(manager);
                     break;
                 case 7:
                     displayUpdateProfile(manager);
@@ -718,38 +718,49 @@ public class HDBManagerView {
         }
     }
 
-    private void displayGenerateReports(HDBManager manager) {
+    private void displayGenerateReport(HDBManager manager) {
         System.out.println("\n==========================================");
-        System.out.println("         GENERATE REPORTS");
+        System.out.println("         GENERATE REPORT");
         System.out.println("==========================================");
+    
+        System.out.print("Enter Project ID (or leave blank for all projects): ");
+        String projectId = scanner.nextLine();
+        projectId = projectId.isEmpty() ? null : projectId;
+    
+        System.out.print("Enter Flat Type (e.g., 2-Room, 3-Room, or leave blank): ");
+        String flatType = scanner.nextLine();
+        flatType = flatType.isEmpty() ? null : flatType;
+    
+        System.out.print("Enter Marital Status (e.g., Single, Married, or leave blank): ");
+        String maritalStatus = scanner.nextLine();
+        maritalStatus = maritalStatus.isEmpty() ? null : maritalStatus;
+    
+        System.out.print("Enter Minimum Age (or leave blank): ");
+        String minAgeInput = scanner.nextLine();
+        int minAge = minAgeInput.isEmpty() ? 0 : Integer.parseInt(minAgeInput);
+    
+        System.out.print("Enter Maximum Age (or leave blank): ");
+        String maxAgeInput = scanner.nextLine();
+        int maxAge = maxAgeInput.isEmpty() ? Integer.MAX_VALUE : Integer.parseInt(maxAgeInput);
+    
+        Report report = reportController.generateApplicantReport(projectId, flatType, maritalStatus, minAge, maxAge);
 
-        System.out.println("Select report type:");
-        System.out.println("1. Applicant Report");
-        System.out.println("2. Booking Report");
-        System.out.println("3. Back to Dashboard");
-        System.out.print("Enter your choice: ");
+        displayReportDetails(report, "Applicant");
 
-        int reportChoice = scanner.nextInt();
-        scanner.nextLine(); // Consume newline
-
-        Report report;
-        switch (reportChoice) {
-            case 1:
-                report = reportController.generateApplicantReport();
-                displayReportFilters(report, "Applicant");
-                break;
-            case 2:
-                report = reportController.generateBookingReport();
-                displayReportFilters(report, "Booking");
-                break;
-            case 3:
-                return;
-            default:
-                System.out.println("Invalid option.");
-                return;
+        System.out.println("\nGenerated Report:");
+        System.out.println("Report ID: " + report.getReportId());
+        System.out.println("Report Type: " + report.getReportType());
+        System.out.println("Generation Date: " + report.getGenerationDate());
+        System.out.println("Statistics: " + report.getStatistics());
+        System.out.println("Applications:");
+        for (Application application : report.getApplications()) {
+            System.out.println("- Applicant NRIC: " + application.getApplicantNRIC());
+            System.out.println("  Project ID: " + application.getProjectId());
+            System.out.println("  Flat Type: " + application.getFlatType());
+            System.out.println("  Status: " + application.getStatus());
         }
     }
-
+/* 
     private void displayReportFilters(Report report, String reportType) {
         boolean exitFilters = false;
 
@@ -857,6 +868,26 @@ public class HDBManagerView {
             // Sample data for illustration
             System.out.println("John Doe\tS1234567A\tProject A\t4-room\t01/04/2025");
             System.out.println("Jane Smith\tS7654321B\tProject B\t3-room\t15/03/2025");
+        }
+
+        System.out.println("\nPress Enter to continue...");
+        scanner.nextLine();
+    } */
+
+    private void displayReportDetails(Report report, String reportType) {
+        System.out.println("\n==========================================");
+        System.out.println("         " + reportType.toUpperCase() + " REPORT");
+        System.out.println("==========================================");
+
+        System.out.println("Total Records: " + report.getTotalRecords());
+        System.out.println(report.getAppliedFilters());
+
+        System.out.println("\nReport Data:");
+        for (Application app : report.getApplications()) {
+            System.out.println("- Applicant NRIC: " + app.getApplicantNRIC());
+            System.out.println("  Project ID: " + app.getProjectId());
+            System.out.println("  Flat Type: " + app.getFlatType());
+            System.out.println("  Status: " + app.getStatus());
         }
 
         System.out.println("\nPress Enter to continue...");

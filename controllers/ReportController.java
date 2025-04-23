@@ -3,114 +3,148 @@ package controllers;
 import models.Report;
 import models.Application;
 import models.Applicant;
+import models.Project;
+import models.User;
 
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.stream.Collectors;
 
+/**
+ * Handles generating and filtering reports for applicant flat bookings.
+ */
 public class ReportController {
+    private ApplicationController applicationController;
+    private UserController userController;
+    private ProjectController projectController;
 
-    private static List<Application> applications = new ArrayList<>(); // Simulating a database of applications
-    private static Applicant applicant; // Simulating a database of applicants
-    // Generate applicant report
+    // Stores the last generated report to enable incremental filtering
+    private Report currentReport;
+
+    /**
+     * Default constructor wiring default controllers.
+     */
+    public ReportController() {
+        this(new ApplicationController(),
+             new UserController(),
+             new ProjectController());
+    }
+
+    /**
+     * Constructor for dependency injection.
+     */
+    public ReportController(ApplicationController ac,
+                            UserController uc,
+                            ProjectController pc) {
+        this.applicationController = ac;
+        this.userController = uc;
+        this.projectController = pc;
+    }
+
+    /**
+     * Generates the base report of all approved/Booked applications.
+     */
     public Report generateApplicantReport() {
         Report report = new Report();
         report.setReportId("RPT" + System.currentTimeMillis());
         report.setReportType("Applicant");
         report.setGenerationDate(new Date());
-        report.setApplications(new ArrayList<>(applications)); // Add all applications to the report
-        report.addStatistic("Total Applicants", applications.size());
-        return report;
-    }
 
-    // Generate booking report
-    public Report generateBookingReport() {
-        Report report = new Report();
-        report.setReportId("RPT" + System.currentTimeMillis());
-        report.setReportType("Booking");
-        report.setGenerationDate(new Date());
+        // Fetch all applications with status "Approved" or "Booked"
+        List<Application> allApps = new ArrayList<>();
+        allApps.addAll(applicationController.getApplicationsByStatus("Approved"));
+        allApps.addAll(applicationController.getApplicationsByStatus("Booked"));
 
-        int successfulBookings = 0;
-        for (Application application : applications) {
-            if ("Successful".equals(application.getStatus())) {
-                report.addApplication(application);
-                successfulBookings++;
-            }
+        // Populate report
+        for (Application app : allApps) {
+            report.addApplication(app);
         }
-        report.addStatistic("Total Successful Bookings", successfulBookings);
+        report.addStatistic("Total Records", report.getTotalRecords());
+
+        currentReport = report;
         return report;
     }
 
-    // Filter report by marital status
-    public Report filterReportByMaritalStatus(String maritalStatus) {
-        Report report = new Report();
-        report.setReportId("RPT" + System.currentTimeMillis());
-        report.setReportType("Applicant Filtered by Marital Status");
-        report.setGenerationDate(new Date());
+    /**
+     * Generates and filters the applicant report in one call.
+     */
+    public Report generateApplicantReport(String projectId,
+                                          String flatType,
+                                          String maritalStatus,
+                                          int minAge,
+                                          int maxAge) {
+        // Start with full report
+        Report report = generateApplicantReport();
+        currentReport = report;
 
-        int count = 0;
-        for (Application application : applications) {
-            if (applicant.getMaritalStatus().equalsIgnoreCase(maritalStatus)) {
-                report.addApplication(application);
-                count++;
-            }
+        // Apply filters in sequence
+        if (projectId != null) {
+            report = filterReportByProject(projectId);
         }
-        report.addStatistic("Filtered by Marital Status (" + maritalStatus + ")", count);
+        if (flatType != null) {
+            report = filterReportByFlatType(flatType);
+        }
+        if (maritalStatus != null) {
+            report = filterReportByMaritalStatus(maritalStatus);
+        }
+        if (minAge > 0 || maxAge < Integer.MAX_VALUE) {
+            report = filterReportByAge(minAge, maxAge);
+        }
         return report;
     }
 
-    // Filter report by flat type
+    /**
+     * Filters the current report by marital status.
+     */
+    public Report filterReportByMaritalStatus(String status) {
+        List<Application> filtered = currentReport.getApplications().stream()
+            .filter(app -> {
+                User u = userController.viewUserDetails(app.getApplicantNRIC());
+                return u instanceof Applicant && ((Applicant)u).getMaritalStatus().equalsIgnoreCase(status);
+            })
+            .collect(Collectors.toList());
+        currentReport.setApplications(filtered);
+        currentReport.addStatistic("Filtered by Marital Status = " + status, filtered.size());
+        return currentReport;
+    }
+
+    /**
+     * Filters the current report by flat type.
+     */
     public Report filterReportByFlatType(String flatType) {
-        Report report = new Report();
-        report.setReportId("RPT" + System.currentTimeMillis());
-        report.setReportType("Applicant Filtered by Flat Type");
-        report.setGenerationDate(new Date());
-
-        int count = 0;
-        for (Application application : applications) {
-            if (flatType.equalsIgnoreCase(application.getFlatType())) {
-                report.addApplication(application);
-                count++;
-            }
-        }
-        report.addStatistic("Filtered by Flat Type (" + flatType + ")", count);
-        return report;
+        List<Application> filtered = currentReport.getApplications().stream()
+            .filter(app -> flatType.equalsIgnoreCase(app.getFlatType()))
+            .collect(Collectors.toList());
+        currentReport.setApplications(filtered);
+        currentReport.addStatistic("Filtered by Flat Type = " + flatType, filtered.size());
+        return currentReport;
     }
 
-    // Filter report by age range
+    /**
+     * Filters the current report by age range.
+     */
     public Report filterReportByAge(int minAge, int maxAge) {
-        Report report = new Report();
-        report.setReportId("RPT" + System.currentTimeMillis());
-        report.setReportType("Applicant Filtered by Age");
-        report.setGenerationDate(new Date());
-
-        int count = 0;
-        for (Application application : applications) {
-            int age = applicant.getAge();
-            if (age >= minAge && age <= maxAge) {
-                report.addApplication(application);
-                count++;
-            }
-        }
-        report.addStatistic("Filtered by Age (" + minAge + "-" + maxAge + ")", count);
-        return report;
+        List<Application> filtered = currentReport.getApplications().stream()
+            .filter(app -> {
+                User u = userController.viewUserDetails(app.getApplicantNRIC());
+                return u instanceof Applicant && ((Applicant)u).getAge() >= minAge && ((Applicant)u).getAge() <= maxAge;
+            })
+            .collect(Collectors.toList());
+        currentReport.setApplications(filtered);
+        currentReport.addStatistic("Filtered by Age between " + minAge + " and " + maxAge, filtered.size());
+        return currentReport;
     }
 
-    // Filter report by project
+    /**
+     * Filters the current report by project ID.
+     */
     public Report filterReportByProject(String projectId) {
-        Report report = new Report();
-        report.setReportId("RPT" + System.currentTimeMillis());
-        report.setReportType("Applicant Filtered by Project");
-        report.setGenerationDate(new Date());
-
-        int count = 0;
-        for (Application application : applications) {
-            if (projectId.equals(application.getProjectId())) {
-                report.addApplication(application);
-                count++;
-            }
-        }
-        report.addStatistic("Filtered by Project (" + projectId + ")", count);
-        return report;
+        List<Application> filtered = currentReport.getApplications().stream()
+            .filter(app -> projectId.equals(app.getProjectId()))
+            .collect(Collectors.toList());
+        currentReport.setApplications(filtered);
+        currentReport.addStatistic("Filtered by Project = " + projectId, filtered.size());
+        return currentReport;
     }
 }
