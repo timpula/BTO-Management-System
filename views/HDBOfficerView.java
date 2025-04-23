@@ -206,43 +206,38 @@ public class HDBOfficerView {
     }
 
     private void displayProcessApplications(HDBOfficer officer) {
-    System.out.println("\n==========================================");
-    System.out.println("         PROCESS APPLICATIONS");
-    System.out.println("==========================================");
+        System.out.println("\n==========================================");
+        System.out.println("         PROCESS APPLICATIONS");
+        System.out.println("==========================================");
 
-    if (officer.getAssignedProjectId() == null || !officer.getRegistrationStatus().equals("Approved")) {
-        System.out.println("You are not assigned to any project yet.");
-        return;
-    }
-
-    List<Application> applications = applicationController.getApplicationsByProject(officer.getAssignedProjectId());
-
-    if (applications.isEmpty()) {
-        System.out.println("No applications to process.");
-        return;
-    }
-
-    // Create a clean list of pending applications (removing debug statements)
-    List<Application> pendingApplications = new ArrayList<>();
-    for (Application app : applications) {
-        // Skip officer's own applications
-        if (app.getApplicantNRIC().equalsIgnoreCase(officer.getNric())) {
-            continue;
+        List<Project> assignedProjects = officerController.getAllAssignedProjects(officer.getNric());
+        if (assignedProjects == null || assignedProjects.isEmpty()) {
+            System.out.println("You are not assigned to any project yet.");
+            return;
         }
-        
-        // Only include pending applications
-        if (app.getStatus().equalsIgnoreCase("Pending")) {
-            pendingApplications.add(app);
+
+        for (Project project : assignedProjects) {
+            List<Application> applications = applicationController.getApplicationsByProject(project.getProjectId());
+            
+            if (!applications.isEmpty()) {
+                System.out.println("\nApplications for " + project.getProjectName() + ":");
+                
+                for (Application app : applications) {
+                    if (app.getStatus().equalsIgnoreCase("Pending")) {
+                        User applicant = userController.viewUserDetails(app.getApplicantNRIC());
+                        if (applicant != null) {
+                            System.out.println("- Application ID: " + app.getApplicationId());
+                            System.out.println("  Applicant: " + applicant.getName());
+                            System.out.println("  NRIC: " + app.getApplicantNRIC());
+                            System.out.println("  Flat Type: " + app.getFlatType());
+                            System.out.println("  Status: " + app.getStatus());
+                            System.out.println();
+                        }
+                    }
+                }
+            }
         }
     }
-
-    if (pendingApplications.isEmpty()) {
-        System.out.println("No pending applications to process.");
-        return;
-    }
-
-    // Rest of the method...
-}
 
     private void displayManageFlats(HDBOfficer officer) {
         System.out.println("\n==========================================");

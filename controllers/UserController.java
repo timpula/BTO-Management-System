@@ -248,4 +248,13 @@ public class UserController {
         }
         return result;
     }    
+
+    public Applicant getApplicantByNRIC(String nric) {
+        for (User user : users) {
+            if (user.getNric().equalsIgnoreCase(nric) && user instanceof Applicant) {
+                return (Applicant) user;
+            }
+        }
+        return null;
+    }
 }

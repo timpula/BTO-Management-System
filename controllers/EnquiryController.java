@@ -33,7 +33,20 @@ public class EnquiryController {
 
     // Delete an enquiry
     public boolean deleteEnquiry(String enquiryId) {
-        return enquiries.removeIf(enquiry -> enquiry.getEnquiryId().equals(enquiryId));
+        for (Enquiry enquiry : enquiries) {
+            if (enquiry.getEnquiryId().equals(enquiryId)) {
+                // Check if the enquiry has been replied to
+                if (enquiry.getReply() != null) {
+                    System.out.println("Cannot delete enquiry. It has already been replied to.");
+                    return false;
+                }
+                enquiries.remove(enquiry);
+                System.out.println("Enquiry deleted successfully.");
+                return true;
+            }
+        }
+        System.out.println("Enquiry not found.");
+        return false;
     }
 
     // View enquiries by user NRIC
