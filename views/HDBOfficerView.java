@@ -42,7 +42,9 @@ public class HDBOfficerView {
             System.out.println("8. Search Applicant by NRIC");
             System.out.println("9. Manage Flat Selection");
             System.out.println("10. Generate Booking Receipt");
-            System.out.println("11. Logout");
+            System.out.println("11. Set Project Filters");
+            System.out.println("12. Change Password");
+            System.out.println("13. Logout");
             System.out.print("Please select an option: ");
 
             choice = scanner.nextInt();
@@ -80,13 +82,19 @@ public class HDBOfficerView {
                     displayGenerateReceipt(officer);
                     break;
                 case 11:
+                    displaySetFilters(officer);
+                    break;
+                case 12:
+                    changePassword(officer);
+                    break;
+                case 13:
                     System.out.println("Logging out...");
                     return;
                 default:
                     System.out.println("Invalid option. Please try again.");
                     break;
             }
-        } while (choice != 11);
+        } while (choice != 13);
     }
 
     private void displayRegisterForProject(HDBOfficer officer) {
@@ -215,9 +223,19 @@ public class HDBOfficerView {
 
         System.out.println("Pending Applications:");
         List<Application> pendingApplications = applications.stream()
-                .filter(a -> a.getStatus().equals("Pending"))
-                .filter(a -> !a.getApplicantNRIC().equals(officer.getNric())) // 🔒 Skip officer's own application
-                .collect(java.util.stream.Collectors.toList());
+            .peek(a -> {
+                System.out.println("→ Checking application: " + a.getApplicationId() + " by " + a.getApplicantNRIC());
+                System.out.println("→ Status: " + a.getStatus());
+            })
+            .filter(a -> a.getStatus().equalsIgnoreCase("Pending"))
+            .filter(a -> {
+                boolean isOfficer = a.getApplicantNRIC().equalsIgnoreCase(officer.getNric());
+                if (isOfficer) {
+                    System.out.println("⛔ Skipping officer's own application: " + a.getApplicationId());
+                }
+                return !isOfficer;
+            })
+            .collect(java.util.stream.Collectors.toList());
 
         if (pendingApplications.isEmpty()) {
             System.out.println("No pending applications to process.");
@@ -703,4 +721,42 @@ public class HDBOfficerView {
             // Add actual printing logic here if needed
         }
     }
+
+    private void displaySetFilters(HDBOfficer officer) {
+        System.out.println("\n==========================================");
+        System.out.println("         SET PROJECT FILTERS");
+        System.out.println("==========================================");
+
+        System.out.print("Enter neighborhood to filter by (leave blank for no filter): ");
+        String neighborhood = scanner.nextLine();
+
+        System.out.print("Enter flat type to filter by (e.g., 2-Room, 3-Room; leave blank for no filter): ");
+        String flatType = scanner.nextLine();
+
+        // Use controller to set filters
+        officerController.setFilters(officer.getNric(), neighborhood, flatType);
+
+        System.out.println("Filters updated successfully!");
+    }
+
+    private void changePassword(HDBOfficer officer) {
+        System.out.println("\n==========================================");
+        System.out.println("         CHANGE PASSWORD");
+        System.out.println("==========================================");
+
+        System.out.print("Enter current password: ");
+        String currentPassword = scanner.nextLine();
+        System.out.print("Enter new password: ");
+        String newPassword = scanner.nextLine();
+
+        boolean changed = officerController.changePassword(officer.getNric(), currentPassword, newPassword);
+
+        if (changed) {
+            System.out.println("Password changed successfully!");
+            System.out.println("You will now be logged out for security reasons.");
+        } else {
+            System.out.println("Failed to change password. Please check your current password.");
+        }
+    }
+
 }

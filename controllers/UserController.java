@@ -8,6 +8,7 @@ import models.Project;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Scanner;
 
 public class UserController {
     private static List<User> users = new ArrayList<>(); // Shared user list
@@ -18,40 +19,57 @@ public class UserController {
         return currentUser;
     }
 
-    // ✅ Fixed: Login reuses actual stored object (e.g. HDBOfficer with assignedProjectId)
     public User login(String nric, String password) {
-        User user = findUserByNric(nric);
+        List<User> matchingUsers = findUsersByNric(nric);
+        
+        if (matchingUsers.isEmpty()) {
+            System.out.println("User not found.");
+            return null;
+        }
 
-        if (user != null && user.getPassword().equals(password)) {
-            switch (user.getUserType()) {
-                case "Applicant":
-                    currentUser = (Applicant) user;
-                    break;
-                case "HDBOfficer":
-                    currentUser = (HDBOfficer) user;
-                    break;
-                case "HDBManager":
-                    currentUser = (HDBManager) user;
-                    break;
-                default:
-                    currentUser = user;
-                    break;
-            }
+        // Verify password (assuming same password for all roles)
+        if (!matchingUsers.get(0).getPassword().equals(password)) {
+            System.out.println("Invalid password.");
+            return null;
+        }
+
+        // If only one role, return that user
+        if (matchingUsers.size() == 1) {
+            currentUser = matchingUsers.get(0);
             return currentUser;
         }
 
-        System.out.println("Login failed for user: " + nric);
-        return null;
+        // Multiple roles found - ask user to choose
+        System.out.println("\nMultiple roles found. Please select your role:");
+        for (int i = 0; i < matchingUsers.size(); i++) {
+            System.out.println((i + 1) + ". " + matchingUsers.get(i).getUserType());
+        }
+
+        Scanner scanner = new Scanner(System.in);
+        int choice;
+        do {
+            System.out.print("Enter choice (1-" + matchingUsers.size() + "): ");
+            try {
+                choice = Integer.parseInt(scanner.nextLine());
+                if (choice >= 1 && choice <= matchingUsers.size()) {
+                    currentUser = matchingUsers.get(choice - 1);
+                    return currentUser;
+                }
+            } catch (NumberFormatException e) {
+                // Invalid input, will prompt again
+            }
+            System.out.println("Invalid choice. Please try again.");
+        } while (true);
     }
 
-    // Find user by NRIC (internal use)
-    private User findUserByNric(String nric) {
+    private List<User> findUsersByNric(String nric) {
+        List<User> matchingUsers = new ArrayList<>();
         for (User user : users) {
             if (user.getNric().equalsIgnoreCase(nric)) {
-                return user;
+                matchingUsers.add(user);
             }
         }
-        return null;
+        return matchingUsers;
     }
 
     // Lookup user by NRIC or Name
@@ -95,13 +113,21 @@ public class UserController {
         return false;
     }
 
-    // Get user by NRIC and cast if Applicant
+    // Get user by NRIC and cast if Applicant, HDBOfficer, or HDBManager
     public User getUserByNRIC(String nric) {
-        User user = findUserByNric(nric);
-        if (user instanceof Applicant) {
-            return (Applicant) user;
+        List<User> matchingUsers = findUsersByNric(nric);
+        if (!matchingUsers.isEmpty()) {
+            User user = matchingUsers.get(0);
+            if (user instanceof Applicant) {
+                return (Applicant) user;
+            } else if (user instanceof HDBOfficer) {
+                return (HDBOfficer) user;
+            } else if (user instanceof HDBManager) {
+                return (HDBManager) user;
+            }
+            return user;
         }
-        return user;
+        return null;
     }
 
     // Filter projects by name

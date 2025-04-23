@@ -3,6 +3,9 @@ package models;
 public class HDBOfficer extends User {
     private String assignedProjectId;
     private String registrationStatus; // "Pending", "Approved", "Rejected"
+
+    private String filterNeighborhood;
+    private String filterFlatType;
     
     // Constructors
     public HDBOfficer() {
@@ -29,5 +32,21 @@ public class HDBOfficer extends User {
     
     public void setRegistrationStatus(String registrationStatus) {
         this.registrationStatus = registrationStatus;
+    }
+
+    public String getFilterNeighborhood() {
+        return filterNeighborhood;
+    }
+
+    public void setFilterNeighborhood(String filterNeighborhood) {
+        this.filterNeighborhood = filterNeighborhood;
+    }
+
+    public String getFilterFlatType() {
+        return filterFlatType;
+    }
+
+    public void setFilterFlatType(String filterFlatType) {
+        this.filterFlatType = filterFlatType;
     }
 }
