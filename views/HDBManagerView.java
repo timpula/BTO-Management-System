@@ -212,7 +212,7 @@ public class HDBManagerView {
             newProject.setFlatTypeUnits(flatTypeUnits);
     
             // Set project visibility (default to false)
-            newProject.setVisibility(false);
+            newProject.setVisibility(true);
     
             // Call the createProject function from ProjectController
             boolean success = projectController.createProject(newProject);
