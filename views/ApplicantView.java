@@ -402,7 +402,7 @@ public class ApplicantView{
             if (success) {
                 System.out.println("Enquiry deleted successfully!");
             } else {
-                System.out.println("Failed to delete enquiry. Please try again later.");
+                System.out.println("Failed to delete enquiry.");
             }
         } else {
             System.out.println("Deletion cancelled.");
