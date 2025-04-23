@@ -6,8 +6,8 @@ import models.Registration;
 import models.Application;
 import models.User;
 
-import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Controller for HDBManager-specific actions,
@@ -42,29 +42,14 @@ public class HDBManagerController implements IChangePassword, IFilter {
              new ApplicationController());
     }
 
-    private static List<Registration> registrations = new ArrayList<>(); // Simulating a database of registrations
-     private static List<Application> applications = new ArrayList<>(); // Simulating a database of applications
-     private static List<Project> projects = new ArrayList<>(); // Simulating a database of projects
     // --- Officer Registration Approval/Rejection ---
 
     public boolean approveOfficerRegistration(String registrationId) {
-        for (Registration registration : registrations) {
-            if (registration.getRegistrationId().equals(registrationId) && registration.getStatus().equals("Pending")) {
-                registration.setStatus("Approved");
-                return true;
-            }
-        }
-        return false; // Registration not found or already processed 
+        return registrationController.updateRegistrationStatus(registrationId, "Approved");
     }
 
     public boolean rejectOfficerRegistration(String registrationId) {
-        for (Registration registration : registrations) {
-            if (registration.getRegistrationId().equals(registrationId) && registration.getStatus().equals("Pending")) {
-                registration.setStatus("Rejected");
-                return true;
-            }
-        }
-        return false; // Registration not found or already processed    
+        return registrationController.updateRegistrationStatus(registrationId, "Rejected");
     }
 
     /**
@@ -76,24 +61,12 @@ public class HDBManagerController implements IChangePassword, IFilter {
 
     // --- Application Approval/Rejection ---
 
-        public boolean approveApplication(String applicationId) {
-            for (Application application : applications) {
-                if (application.getApplicationId().equals(applicationId) && application.getStatus().equals("Pending")) {
-                    application.setStatus("Approved");
-                    return true;
-                }
-            }
-            return false; // Application not found or already processed
+    public boolean approveApplication(String applicationId) {
+        return applicationController.updateApplicationStatus(applicationId, "Successful");
     }
 
     public boolean rejectApplication(String applicationId) {
-        for (Application application : applications) {
-            if (application.getApplicationId().equals(applicationId) && application.getStatus().equals("Pending")) {
-                application.setStatus("Rejected");
-                return true;
-            }
-        }
-        return false; // Application not found or already processed
+        return applicationController.updateApplicationStatus(applicationId, "Unsuccessful");
     }
 
     // --- Withdrawal Request Approval/Rejection ---
@@ -103,8 +76,8 @@ public class HDBManagerController implements IChangePassword, IFilter {
     }
 
     public boolean rejectWithdrawalRequest(String applicationId) {
-        // Assuming that rejecting a withdrawal means setting back to "Approved"
-        return applicationController.updateApplicationStatus(applicationId, "Approved");
+        // Revert withdrawal: set back to Successful
+        return applicationController.updateApplicationStatus(applicationId, "Successful");
     }
 
     // --- Project Visibility ---
@@ -129,12 +102,8 @@ public class HDBManagerController implements IChangePassword, IFilter {
 
     @Override
     public List<Project> filterProjects(String managerNric) {
-        List<Project> result = new ArrayList<>();
-        for (Project p : projectController.viewAllProjects()) {
-            if (managerNric.equals(p.getCreatorNRIC())) {
-                result.add(p);
-            }
-        }
-        return result;
+        return projectController.viewAllProjects().stream()
+                .filter(p -> managerNric.equals(p.getCreatorNRIC()))
+                .collect(Collectors.toList());
     }
 }

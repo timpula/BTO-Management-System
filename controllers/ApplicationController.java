@@ -66,7 +66,7 @@ public class ApplicationController {
         for (Application application : applications) {
             if (application.getApplicationId().equals(applicationId)) {
                 // Validate status transition
-                if (isValidStatusTransition(application.getStatus(), newStatus)) {
+                //if (isValidStatusTransition(application.getStatus(), newStatus)) {
                     // --- BEGIN: enforce flat‐unit availability on approval ---
                     if (application.getStatus().equals("Pending") && newStatus.equals("Successful")) {
                         Project proj = projectController.getProjectDetails(application.getProjectId());
@@ -101,11 +101,11 @@ public class ApplicationController {
                     return false;
                 }
             }
-        }
+        //}
         System.out.println("Application not found: " + applicationId);
         return false;
     }
-
+/* 
     // Validate status transition
     private boolean isValidStatusTransition(String currentStatus, String newStatus) {
         // Define valid transitions
@@ -121,7 +121,7 @@ public class ApplicationController {
             return false; // Final state, no further transitions
         }
         return false;
-    }
+    } */
 
     // Get application by NRIC
     public Application getApplicationByNRIC(String applicantNRIC) {

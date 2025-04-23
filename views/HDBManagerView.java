@@ -588,7 +588,7 @@ public class HDBManagerView {
         System.out.println("         APPROVE APPLICATIONS");
         System.out.println("==========================================");
 
-        List<Application> pendingApplications = applicationController.getApplicationsByStatus("Pending");
+        List<Application> pendingApplications = applicationController.getApplicationsByStatus("PENDING");
 
         if (pendingApplications.isEmpty()) {
             System.out.println("No pending applications found.");
