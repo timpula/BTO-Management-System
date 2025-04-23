@@ -99,7 +99,7 @@ public class HDBManagerView {
                     displayEnquiriesForManager(manager);
                     break;
                 case 11:
-                saveAllData();
+                //saveAllData();
                     System.out.println("Logging out...");
                     return;
                 default:
@@ -1040,11 +1040,11 @@ private void displayEnquiriesForManager(HDBManager manager) {
         System.out.println(ok ? "Reply sent!" : "Enquiry not found.");
     }
 }
-
+/* 
     // Save all data to CSV files
     private void saveAllData() {
         projectController.saveProjectsToCSV("/Users/timothyp/Documents/GitHub/BTO-Management-System/ProjectList.csv");
         System.out.println("All data saved successfully.");
     }
-    
+    */
 }
