@@ -20,46 +20,61 @@ public class UserController {
     }
 
     public User login(String nric, String password) {
-        List<User> matchingUsers = findUsersByNric(nric);
+        List<User> matchingUsers = new ArrayList<>();
+        System.out.println("DEBUG: Attempting login for NRIC: " + nric);
         
+        // Get all roles for this NRIC
+        for (User user : users) {
+            if (user.getNric().equalsIgnoreCase(nric)) {
+                matchingUsers.add(user);
+                System.out.println("DEBUG: Found role: " + user.getUserType());
+            }
+        }
+
         if (matchingUsers.isEmpty()) {
             System.out.println("User not found.");
             return null;
         }
 
-        // Verify password (assuming same password for all roles)
+        // Verify password against first user (should be same for all roles)
         if (!matchingUsers.get(0).getPassword().equals(password)) {
             System.out.println("Invalid password.");
             return null;
         }
 
-        // If only one role, return that user
+        // Single role - auto-select
         if (matchingUsers.size() == 1) {
             currentUser = matchingUsers.get(0);
+            System.out.println("DEBUG: Logged in as " + currentUser.getUserType());
             return currentUser;
         }
 
-        // Multiple roles found - ask user to choose
-        System.out.println("\nMultiple roles found. Please select your role:");
-        for (int i = 0; i < matchingUsers.size(); i++) {
-            System.out.println((i + 1) + ". " + matchingUsers.get(i).getUserType());
-        }
-
-        Scanner scanner = new Scanner(System.in);
-        int choice;
-        do {
-            System.out.print("Enter choice (1-" + matchingUsers.size() + "): ");
-            try {
-                choice = Integer.parseInt(scanner.nextLine());
-                if (choice >= 1 && choice <= matchingUsers.size()) {
-                    currentUser = matchingUsers.get(choice - 1);
-                    return currentUser;
-                }
-            } catch (NumberFormatException e) {
-                // Invalid input, will prompt again
+        // Multiple roles - show selection menu
+        try {
+            System.out.println("\nMultiple roles found. Please select your role:");
+            for (int i = 0; i < matchingUsers.size(); i++) {
+                System.out.println((i + 1) + ". " + matchingUsers.get(i).getUserType());
             }
-            System.out.println("Invalid choice. Please try again.");
-        } while (true);
+
+            Scanner scanner = new Scanner(System.in);
+            while (true) {
+                System.out.print("Enter choice (1-" + matchingUsers.size() + "): ");
+                try {
+                    int choice = Integer.parseInt(scanner.nextLine());
+                    if (choice >= 1 && choice <= matchingUsers.size()) {
+                        currentUser = matchingUsers.get(choice - 1);
+                        System.out.println("DEBUG: Selected role: " + currentUser.getUserType());
+                        return currentUser;
+                    }
+                    System.out.println("Invalid choice. Please try again.");
+                } catch (NumberFormatException e) {
+                    System.out.println("Invalid input. Please enter a number.");
+                }
+            }
+        } catch (Exception e) {
+            System.out.println("Error during role selection: " + e.getMessage());
+            return null;
+        }
     }
 
     private List<User> findUsersByNric(String nric) {
@@ -113,20 +128,24 @@ public class UserController {
         return false;
     }
 
-    // Get user by NRIC and cast if Applicant, HDBOfficer, or HDBManager
+    // Get user by NRIC
     public User getUserByNRIC(String nric) {
-        List<User> matchingUsers = findUsersByNric(nric);
-        if (!matchingUsers.isEmpty()) {
-            User user = matchingUsers.get(0);
-            if (user instanceof Applicant) {
-                return (Applicant) user;
-            } else if (user instanceof HDBOfficer) {
-                return (HDBOfficer) user;
-            } else if (user instanceof HDBManager) {
-                return (HDBManager) user;
+        for (User user : users) {
+            if (user.getNric().equalsIgnoreCase(nric)) {
+                return user;
             }
-            return user;
         }
+        return null;
+    }
+
+    public User getUserByNRICAndRole(String nric, String roleType) {
+        for (User user : users) {
+            if (user.getNric().equalsIgnoreCase(nric) && user.getUserType().equals(roleType)) {
+                System.out.println("DEBUG: Found user " + user.getName() + " with role " + roleType);
+                return user;
+            }
+        }
+        System.out.println("DEBUG: No user found with NRIC " + nric + " and role " + roleType);
         return null;
     }
 
@@ -145,4 +164,78 @@ public class UserController {
         System.out.println("Projects filtered by criteria: " + filterCriteria);
         return filteredProjects;
     }
+
+    public List<User> getAllUsers() {
+        return new ArrayList<>(users); // Return a copy of the users list
+    }
+
+    public User authenticate(String nric, String password) {
+        List<User> matchingUsers = new ArrayList<>();
+        
+        // First check for HDBOfficer role
+        for (User user : users) {
+            if (user.getNric().equalsIgnoreCase(nric) && user instanceof HDBOfficer) {
+                matchingUsers.add(user);
+            }
+        }
+        
+        // If no officer found, check other roles
+        if (matchingUsers.isEmpty()) {
+            for (User user : users) {
+                if (user.getNric().equalsIgnoreCase(nric) && !(user instanceof HDBOfficer)) {
+                    matchingUsers.add(user);
+                }
+            }
+        }
+
+        // No users found
+        if (matchingUsers.isEmpty()) {
+            System.out.println("DEBUG: No users found for NRIC: " + nric);
+            return null;
+        }
+
+        // Check password
+        if (!matchingUsers.get(0).getPassword().equals(password)) {
+            System.out.println("DEBUG: Invalid password for NRIC: " + nric);
+            return null;
+        }
+
+        // Single role - return the user
+        if (matchingUsers.size() == 1) {
+            System.out.println("DEBUG: Authenticated as " + matchingUsers.get(0).getUserType());
+            return matchingUsers.get(0);
+        }
+
+        // Multiple roles - show selection menu
+        System.out.println("\nMultiple roles found. Please select your role:");
+        for (int i = 0; i < matchingUsers.size(); i++) {
+            System.out.println((i + 1) + ". " + matchingUsers.get(i).getUserType());
+        }
+
+        Scanner scanner = new Scanner(System.in);
+        while (true) {
+            System.out.print("Enter choice (1-" + matchingUsers.size() + "): ");
+            try {
+                int choice = Integer.parseInt(scanner.nextLine());
+                if (choice >= 1 && choice <= matchingUsers.size()) {
+                    User selectedUser = matchingUsers.get(choice - 1);
+                    System.out.println("DEBUG: Selected role: " + selectedUser.getUserType());
+                    return selectedUser;
+                }
+            } catch (NumberFormatException e) {
+                // Invalid input
+            }
+            System.out.println("Invalid choice. Please try again.");
+        }
+    }
+
+    public List<User> getUsersByNRIC(String nric) {
+        List<User> result = new ArrayList<>();
+        for (User user : users) {
+            if (user.getNric().equalsIgnoreCase(nric)) {
+                result.add(user);
+            }
+        }
+        return result;
+    }    
 }

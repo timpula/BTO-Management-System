@@ -4,6 +4,7 @@ import controllers.*;
 import models.*;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Scanner;
 
 public class HDBOfficerView {
@@ -178,30 +179,28 @@ public class HDBOfficerView {
 
     private void displayViewAssignedProject(HDBOfficer officer) {
         System.out.println("\n==========================================");
-        System.out.println("         ASSIGNED PROJECT");
+        System.out.println("         ASSIGNED PROJECTS");
         System.out.println("==========================================");
 
-        if (officer.getAssignedProjectId() == null || !officer.getRegistrationStatus().equals("Approved")) {
-            System.out.println("You are not assigned to any project yet.");
+        List<Project> projects = officerController.getAllAssignedProjects(officer.getNric());
+        if (projects == null || projects.isEmpty()) {
+            System.out.println("No projects assigned.");
             return;
         }
 
-        Project project = officerController.viewAssignedProject(officer.getNric());
-
-        if (project == null) {
-            System.out.println("Assigned project not found in the system.");
-            return;
+        System.out.println("\nAssigned Projects:");
+        for (Project project : projects) {
+            System.out.println("\nProject Details:");
+            System.out.println("Project Name: " + project.getProjectName());
+            System.out.println("Project ID: " + project.getProjectId());
+            System.out.println("Neighborhood: " + project.getNeighborhood());
+            System.out.println("Available Flat Types:");
+            for (Map.Entry<String, Integer> entry : project.getFlatTypeUnits().entrySet()) {
+                System.out.println("- " + entry.getKey() + ": " + entry.getValue() + " units");
+            }
         }
-        System.out.println("Project ID: " + project.getProjectId());
-        System.out.println("Name: " + project.getProjectName());
-        System.out.println("Neighborhood: " + project.getNeighborhood());
-        System.out.println("Application Period: " + project.getApplicationOpeningDate() + " to "
-                + project.getApplicationClosingDate());
 
-        System.out.println("\nFlat Types Available:");
-        for (String flatType : project.getFlatTypeUnits().keySet()) {
-            System.out.println("- " + flatType + ": " + project.getFlatTypeUnits().get(flatType) + " units");
-        }
+        System.out.println("\nRegistration Status: " + officer.getRegistrationStatus());
     }
 
     private void displayProcessApplications(HDBOfficer officer) {

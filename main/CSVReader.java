@@ -2,6 +2,7 @@ package main;
 
 import controllers.UserController;
 import controllers.ProjectController;
+import controllers.HDBOfficerController;
 import models.User;
 import models.Project;
 import models.Applicant;
@@ -15,6 +16,8 @@ import java.text.SimpleDateFormat;
 import java.text.ParseException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Reads data from CSV files to initialize the system.
@@ -26,6 +29,7 @@ public class CSVReader {
     // ✅ Shared instances
     private static final UserController userController = new UserController();
     private static final ProjectController projectController = new ProjectController();
+    private static final HDBOfficerController officerController = new HDBOfficerController();
 
     /**
      * Initializes the system by reading data from CSV files.
@@ -127,6 +131,9 @@ public class CSVReader {
             String[] flatTypes = {type1, type2};
             int[] unitCounts = {unitsType1, unitsType2};
 
+            // Store created projects for officer assignment
+            List<Project> createdProjects = new ArrayList<>();
+
             for (int i = 0; i < flatTypes.length; i++) {
                 Project project = new Project();
                 project.setProjectName(projectName + " - " + flatTypes[i]);
@@ -156,36 +163,61 @@ public class CSVReader {
                 }
 
                 boolean created = projectController.createProject(project);
+                if (created) {
+                    createdProjects.add(project);
+                }
+            }
 
-                if (created && officerList != null && !officerList.trim().isEmpty()) {
-                    for (String officerName : officerList.split(",")) {
-                        officerName = officerName.trim().replace("\"", "");
-                
-                        if (!officerName.isEmpty()) {
-                            System.out.println("DEBUG: Looking for officer: " + officerName);
-                
-                            User user = userController.viewUserDetails(officerName);
-                            if (user != null) {
-                                System.out.println("Matched user: " + user.getName() + " [" + user.getNric() + "]");
-                
-                                if (user instanceof HDBOfficer) {
-                                    HDBOfficer officer = (HDBOfficer) user;
-                                    officer.setAssignedProjectId(project.getProjectId());
-                                    officer.setRegistrationStatus("Approved");
-                
-                                    int currentSlots = project.getAvailableOfficerSlots();
-                                    project.setAvailableOfficerSlots(Math.max(0, currentSlots - 1));
-                
-                                    System.out.println("Auto-assigned officer " + officer.getName() + " to " + project.getProjectName());
-                                } else {
-                                    System.err.println("User matched but is not an HDBOfficer: " + user.getName());
+            // Assign officers to all flat types of the same project
+            if (!createdProjects.isEmpty() && officerList != null && !officerList.trim().isEmpty()) {
+                for (String officerName : officerList.split(",")) {
+                    officerName = officerName.trim().replace("\"", "");
+
+                    if (!officerName.isEmpty()) {
+                        System.out.println("DEBUG: Looking for officer: " + officerName);
+
+                        for (User user : userController.getAllUsers()) {
+                            if (user.getName().equalsIgnoreCase(officerName)) {
+                                User officerUser = userController.getUserByNRICAndRole(user.getNric(), "HDBOfficer");
+                                if (officerUser != null && officerUser instanceof HDBOfficer) {
+                                    // For each project, create a separate officer instance
+                                    for (Project proj : createdProjects) {
+                                        // Update project slots
+                                        int currentSlots = proj.getAvailableOfficerSlots();
+                                        proj.setAvailableOfficerSlots(Math.max(0, currentSlots - 1));
+                                        
+                                        // Create new officer instance for this project
+                                        HDBOfficer projectOfficer = new HDBOfficer(
+                                            ((HDBOfficer) officerUser).getNric(),
+                                            ((HDBOfficer) officerUser).getName(),
+                                            ((HDBOfficer) officerUser).getPassword(),
+                                            ((HDBOfficer) officerUser).getAge(),
+                                            ((HDBOfficer) officerUser).getMaritalStatus()
+                                        );
+                                        
+                                        // Set project-specific details
+                                        projectOfficer.setAssignedProjectId(proj.getProjectId());
+                                        projectOfficer.setRegistrationStatus("Approved");
+                                        
+                                        // Add to officer controller
+                                        officerController.addOfficer(projectOfficer);
+
+                                        System.out.println("DEBUG: Created assignment for " + projectOfficer.getName() + 
+                                                       " to " + proj.getProjectName() + 
+                                                       " (ID: " + proj.getProjectId() + ")" +
+                                                       " Status: " + projectOfficer.getRegistrationStatus());
+                                    }
+                                    break;
                                 }
-                            } else {
-                                System.out.println("No user matched for: [" + officerName + "]");
                             }
                         }
                     }
-                }                
+                }
+            }
+
+            // After assigning officers
+            for (Project proj : createdProjects) {
+                projectController.updateProject(proj);
             }
         }
 
