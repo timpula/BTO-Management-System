@@ -66,43 +66,34 @@ public class ApplicationController {
         
         for (Application application : applications) {
             if (application.getApplicationId().equals(applicationId)) {
-                // Validate status transition
-                //if (isValidStatusTransition(application.getStatus(), newStatus)) {
-                    // --- BEGIN: enforce flat‐unit availability on approval ---
-                    if (application.getStatus().equals("Pending") && newStatus.equals("Successful")) {
-                        Project proj = projectController.getProjectDetails(application.getProjectId());
-                        Map<String,Integer> units = proj.getFlatTypeUnits();
-                        int avail = units.get(application.getFlatType());
-                        if (avail <= 0) {
-                            System.out.println("Error: No units available for flat type " + application.getFlatType());
-                            return false;
-                        }
-                        units.put(application.getFlatType(), avail - 1);
-                        projectController.editProject(proj.getProjectId(), proj);
+                // Handle flat unit adjustments for approval
+                if (newStatus.equals("Successful")) {
+                    Project proj = projectController.getProjectDetails(application.getProjectId());
+                    Map<String, Integer> units = proj.getFlatTypeUnits();
+                    int avail = units.get(application.getFlatType());
+                    if (avail <= 0) {
+                        System.out.println("Error: No units available for flat type " + application.getFlatType());
+                        return false;
                     }
-                    // --- END: enforce flat‐unit availability on approval ---
-
-                    // --- BEGIN: restore units on withdrawal via updateStatus ---
-                    if (!application.getStatus().equals("Withdrawn") && newStatus.equals("Withdrawn")) {
-                        // only restore if it was previously “Successful”
-                        if (application.getStatus().equals("Successful")) {
-                            Project proj = projectController.getProjectDetails(application.getProjectId());
-                            Map<String,Integer> units = proj.getFlatTypeUnits();
-                            units.put(application.getFlatType(), units.get(application.getFlatType()) + 1);
-                            projectController.editProject(proj.getProjectId(), proj);
-                        }
-                    }
-                    // --- END: restore units on withdrawal via updateStatus ---
-
-                    application.setStatus(newStatus);
-                    System.out.println("Application " + applicationId + " status updated to: " + newStatus);
-                    return true;
-                } else {
-                    System.out.println("Invalid status transition from " + application.getStatus() + " to " + newStatus);
-                    return false;
+                    units.put(application.getFlatType(), avail - 1);
+                    projectController.editProject(proj.getProjectId(), proj);
                 }
+    
+                // Handle flat unit restoration for withdrawal
+                if (newStatus.equals("Withdrawn") && application.getStatus().equals("Successful")) {
+                    Project proj = projectController.getProjectDetails(application.getProjectId());
+                    Map<String, Integer> units = proj.getFlatTypeUnits();
+                    units.put(application.getFlatType(), units.get(application.getFlatType()) + 1);
+                    projectController.editProject(proj.getProjectId(), proj);
+                }
+    
+                // Update the application status
+                application.setStatus(newStatus);
+                System.out.println("Application " + applicationId + " status updated to: " + newStatus);
+                return true;
             }
-        //}
+        }
+    
         System.out.println("Application not found: " + applicationId);
         return false;
     }
