@@ -4,7 +4,9 @@ import models.*;
 
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class HDBOfficerController implements IChangePassword, IFilter {
 
@@ -15,6 +17,7 @@ public class HDBOfficerController implements IChangePassword, IFilter {
     private ProjectController projectController = new ProjectController();
 
     public boolean registerForProject(String officerNRIC, String projectId) {
+        // Existing validation code...
         for (Application app : applications) {
             if (app.getApplicantNRIC().equals(officerNRIC) 
                 && app.getProjectId().equals(projectId) 
@@ -23,7 +26,7 @@ public class HDBOfficerController implements IChangePassword, IFilter {
                 return false;
             }
         }
-
+    
         Project targetProject = projectController.getProjectDetails(projectId);
         for (HDBOfficer officer : officers) {
             if (officer.getNric().equals(officerNRIC) && officer.getAssignedProjectId() != null) {
@@ -34,8 +37,18 @@ public class HDBOfficerController implements IChangePassword, IFilter {
                 }
             }
         }
-
-        return true;
+    
+        // ADD THIS: Update the officer's information
+        for (HDBOfficer officer : officers) {
+            if (officer.getNric().equals(officerNRIC)) {
+                officer.setAssignedProjectId(projectId);
+                officer.setRegistrationStatus("Pending"); // Set initial status
+                System.out.println("Registration submitted for approval");
+                return true;
+            }
+        }
+    
+        return false; // Officer not found
     }
 
     private boolean hasOverlappingPeriod(Project project1, Project project2) {
@@ -58,17 +71,56 @@ public class HDBOfficerController implements IChangePassword, IFilter {
     }
 
     public Project viewAssignedProject(String officerNRIC) {
-        UserController userController = new UserController();
-        User user = userController.viewUserDetails(officerNRIC);
+        System.out.println("\nDEBUG: Looking for officer with NRIC: " + officerNRIC);
+        debugPrintOfficers();  // Print all officers and their assignments
 
-        if (user instanceof HDBOfficer) {
-            HDBOfficer officer = (HDBOfficer) user;
-            if (officer.getAssignedProjectId() != null && "Approved".equalsIgnoreCase(officer.getRegistrationStatus())) {
-                return projectController.getProjectDetails(officer.getAssignedProjectId());
+        // Get all projects assigned to this officer
+        List<Project> assignedProjects = new ArrayList<>();
+        for (HDBOfficer officer : officers) {
+            if (officer.getNric().equals(officerNRIC)) {
+                Project project = projectController.getProjectDetails(officer.getAssignedProjectId());
+                if (project != null) {
+                    assignedProjects.add(project);
+                }
             }
         }
 
-        return null;
+        if (assignedProjects.isEmpty()) {
+            System.out.println("You are not assigned to any project yet.");
+            return null;
+        }
+
+        // Print all assigned projects
+        System.out.println("\nAssigned Projects:");
+        for (Project project : assignedProjects) {
+            System.out.println("- " + project.getProjectName() + " (ID: " + project.getProjectId() + ")");
+        }
+
+        // Return first project for backward compatibility
+        return assignedProjects.get(0);
+    }
+
+    public List<Project> getAllAssignedProjects(String officerNRIC) {
+        List<Project> assignedProjects = new ArrayList<>();
+        Set<String> processedProjectIds = new HashSet<>();
+        
+        for (HDBOfficer officer : officers) {
+            if (officer.getNric().equals(officerNRIC) && 
+                officer.getAssignedProjectId() != null &&
+                officer.getRegistrationStatus().equals("Approved")) {
+                
+                String projectId = officer.getAssignedProjectId();
+                if (!processedProjectIds.contains(projectId)) {
+                    Project project = projectController.getProjectDetails(projectId);
+                    if (project != null) {
+                        assignedProjects.add(project);
+                        processedProjectIds.add(projectId);
+                    }
+                }
+            }
+        }
+        
+        return assignedProjects;
     }
 
     public Applicant retrieveApplicantByNRIC(String applicantNRIC) {
@@ -102,7 +154,7 @@ public class HDBOfficerController implements IChangePassword, IFilter {
     public Receipt generateBookingReceipt(String applicationId) {
         for (Application application : applications) {
             if (application.getApplicationId().equals(applicationId) &&
-                (application.getStatus().equals("Successful") || application.getStatus().equals("Booked"))) {
+                (application.getStatus().equals("SUCCESSFUL") || application.getStatus().equals("BOOKED"))) {
 
                 Applicant applicant = retrieveApplicantByNRIC(application.getApplicantNRIC());
                 if (applicant == null) return null;
@@ -214,6 +266,42 @@ public class HDBOfficerController implements IChangePassword, IFilter {
                 officer.setFilterFlatType(flatType.isEmpty() ? null : flatType);
                 return;
             }
+        }
+    }
+
+    public void addOfficer(HDBOfficer officer) {
+        if (officer == null || officer.getAssignedProjectId() == null) return;
+        
+        boolean assignmentExists = false;
+        for (HDBOfficer off : officers) {
+            if (off.getNric().equals(officer.getNric()) && 
+                off.getAssignedProjectId().equals(officer.getAssignedProjectId())) {
+                assignmentExists = true;
+                break;
+            }
+        }
+        
+        if (!assignmentExists) {
+            HDBOfficer newOfficer = new HDBOfficer(
+                officer.getNric(),
+                officer.getName(),
+                officer.getPassword(),
+                officer.getAge(),
+                officer.getMaritalStatus()
+            );
+            newOfficer.setAssignedProjectId(officer.getAssignedProjectId());
+            newOfficer.setRegistrationStatus("Approved");
+            officers.add(newOfficer);
+        }
+    }
+
+    public void debugPrintOfficers() {
+        System.out.println("\nDEBUG: Current officers in system:");
+        for (HDBOfficer officer : officers) {
+            System.out.println("- " + officer.getName() + 
+                             " [" + officer.getNric() + "] " +
+                             "Project: " + officer.getAssignedProjectId() + 
+                             " Status: " + officer.getRegistrationStatus());
         }
     }
 

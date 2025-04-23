@@ -664,62 +664,58 @@ public class HDBManagerView {
         System.out.println("\n==========================================");
         System.out.println("     APPROVE WITHDRAWAL REQUESTS");
         System.out.println("==========================================");
-
-        // Note: In a real implementation, you would have a method to get withdrawal
-        // requests
-        // For now, we'll simulate it with applications that have status "Withdrawal
-        // Requested"
-        List<Application> withdrawalRequests = applicationController.getApplicationsByStatus("Withdrawal Requested");
-
+    
+        // Fetch applications with status "Booked" or "Successful"
+        List<Application> withdrawalRequests = applicationController.getApplicationsByStatus("BOOKED");
+        withdrawalRequests.addAll(applicationController.getApplicationsByStatus("SUCCESSFUL"));
+    
         if (withdrawalRequests.isEmpty()) {
             System.out.println("No pending withdrawal requests found.");
             return;
         }
-
+    
         System.out.println("Pending Withdrawal Requests:");
         for (int i = 0; i < withdrawalRequests.size(); i++) {
             Application app = withdrawalRequests.get(i);
             User applicant = userController.viewUserDetails(app.getApplicantNRIC());
             Project project = projectController.getProjectDetails(app.getProjectId());
-
+    
             System.out.println((i + 1) + ". Application ID: " + app.getApplicationId());
             System.out.println("   Applicant: " + applicant.getName() + " (NRIC: " + applicant.getNric() + ")");
             System.out.println("   Project: " + project.getProjectName() + " (" + project.getNeighborhood() + ")");
             System.out.println("   Application Date: " + app.getApplicationDate());
             System.out.println();
         }
-
+    
         System.out.print("Select a withdrawal request to process (enter number): ");
         int reqChoice = scanner.nextInt();
         scanner.nextLine(); // Consume newline
-
+    
         if (reqChoice < 1 || reqChoice > withdrawalRequests.size()) {
             System.out.println("Invalid selection.");
             return;
         }
-
+    
         Application selectedReq = withdrawalRequests.get(reqChoice - 1);
         User applicant = userController.viewUserDetails(selectedReq.getApplicantNRIC());
         Project project = projectController.getProjectDetails(selectedReq.getProjectId());
-
+    
         System.out.println("\nWithdrawal Request Details:");
         System.out.println("Applicant: " + applicant.getName() + " (NRIC: " + applicant.getNric() + ")");
         System.out.println("Project: " + project.getProjectName() + " (" + project.getNeighborhood() + ")");
         System.out.println("Application Date: " + selectedReq.getApplicationDate());
-
+    
         System.out.println("\nSelect action:");
         System.out.println("1. Approve Withdrawal Request");
         System.out.println("2. Reject Withdrawal Request");
         System.out.println("3. Back to Dashboard");
         System.out.print("Enter your choice: ");
-
+    
         int actionChoice = scanner.nextInt();
         scanner.nextLine(); // Consume newline
-
+    
         switch (actionChoice) {
             case 1:
-                // In a real implementation, you would have specific withdrawal request IDs
-                // For now, we'll use the application ID
                 boolean approved = managerController.approveWithdrawalRequest(selectedReq.getApplicationId());
                 if (approved) {
                     System.out.println("Withdrawal request approved successfully!");

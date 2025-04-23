@@ -235,17 +235,9 @@ public class ApplicationController {
         for (Application application : applications) {
             if (application.getApplicationId().equals(applicationId)) {
                 // Only allow withdrawal if status is Pending or Successful
-                if (application.getStatus().equals("Pending") || application.getStatus().equals("Successful")) {
-                    // --- restore a unit if this was already “Successful” ---
-                    if (application.getStatus().equals("Successful")) {
-                        Project proj = projectController.getProjectDetails(application.getProjectId());
-                        Map<String,Integer> units = proj.getFlatTypeUnits();
-                        units.put(application.getFlatType(), units.get(application.getFlatType()) + 1);
-                        projectController.editProject(proj.getProjectId(), proj);
-                    }
-
-                    application.setStatus("Withdrawn");
-                    System.out.println("Application withdrawn: " + applicationId);
+                if (application.getStatus().equals("BOOKED") || application.getStatus().equals("SUCCESSFUL")) {
+                    System.out.println("Withdrawal request submitted: " + applicationId);
+                    application.setStatus("UNSUCCESSFUL");
                     return true;
                 } else {
                     System.out.println("Cannot withdraw application with status: " + application.getStatus());

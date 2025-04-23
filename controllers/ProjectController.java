@@ -2,9 +2,8 @@ package controllers;
 
 import models.Project;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Date;
-
+import java.util.List;
 
 public class ProjectController {
 
@@ -13,14 +12,12 @@ public class ProjectController {
 
     // Create a new project
     public boolean createProject(Project project) {
-        // Enforce officer‐slot limits
         int slots = project.getTotalOfficerSlots();
         if (slots < 1 || slots > 10) {
             System.out.println("Error: Officer slots must be between 1 and 10.");
             return false;
         }
 
-        // Prevent overlapping application periods for the same manager
         String newBase = project.getProjectName().split(" - ")[0].trim();
         for (Project p : projects) {
             if (!p.getCreatorNRIC().equals(project.getCreatorNRIC())) continue;
@@ -34,7 +31,6 @@ public class ProjectController {
 
             Date o1 = p.getApplicationOpeningDate(), c1 = p.getApplicationClosingDate();
             Date o2 = project.getApplicationOpeningDate(), c2 = project.getApplicationClosingDate();
-            // if periods overlap
             if (!(c2.before(o1) || o2.after(c1))) {
                 System.out.println("Error: You already have a project in that date range.");
                 return false;
@@ -42,44 +38,32 @@ public class ProjectController {
         }
 
         if (project != null) {
-            // Generate a unique projectId using the counter
             String projectId = String.format("PRJ%02d", projectCounter);
             project.setProjectId(projectId);
-
-            // Increment the counter for the next project 
             projectCounter++;
-
-            // Add the project to the list
             projects.add(project);
-
             System.out.println("Project created with ID: " + projectId);
             return true;
         }
         return false;
     }
 
-    // Other methods (editProject, deleteProject, etc.) remain unchanged
-
-
     // Edit an existing project
     public boolean editProject(String projectId, Project updatedProject) {
         for (Project project : projects) {
             if (project.getProjectId().equals(projectId)) {
-                // Enforce officer‐slot limits
                 int newSlots = updatedProject.getTotalOfficerSlots();
                 if (newSlots < 1 || newSlots > 10) {
                     System.out.println("Error: Officer slots must be between 1 and 10.");
                     return false;
                 }
 
-                // Prevent overlapping periods for the same manager (skip the project itself)
                 String newBase = updatedProject.getProjectName().split(" - ")[0].trim();
                 for (Project other : projects) {
-                    if (!other.getCreatorNRIC().equals(updatedProject.getCreatorNRIC())
-                        || other.getProjectId().equals(projectId)) continue;
+                    if (!other.getCreatorNRIC().equals(updatedProject.getCreatorNRIC()) ||
+                        other.getProjectId().equals(projectId)) continue;
 
                     String existingBase = other.getProjectName().split(" - ")[0].trim();
-                    // skip overlap if the base names match
                     if (existingBase.equalsIgnoreCase(newBase)) {
                         //System.out.println("DEBUG: skipping overlap for same base name \"" + existingBase + "\"");
                         continue;
@@ -87,7 +71,6 @@ public class ProjectController {
 
                     Date o1 = other.getApplicationOpeningDate(), c1 = other.getApplicationClosingDate();
                     Date o2 = updatedProject.getApplicationOpeningDate(), c2 = updatedProject.getApplicationClosingDate();
-                    // if periods overlap
                     if (!(c2.before(o1) || o2.after(c1))) {
                         System.out.println("Error: Dates overlap with project " + other.getProjectId());
                         return false;
@@ -114,7 +97,7 @@ public class ProjectController {
 
     // View all projects
     public List<Project> viewAllProjects() {
-        return new ArrayList<>(projects); // Return a copy of the list
+        return new ArrayList<>(projects);
     }
 
     // Toggle project visibility
@@ -147,27 +130,27 @@ public class ProjectController {
                 return project;
             }
         }
-        return null; // Return null if project not found
+        return null;
     }
 
     // Get projects by neighborhood
     public List<Project> getProjectsByNeighborhood(String neighborhood) {
-        List<Project> neighborhoodProjects = new ArrayList<>();
+        List<Project> result = new ArrayList<>();
         for (Project project : projects) {
             if (project.getNeighborhood().equalsIgnoreCase(neighborhood)) {
-                neighborhoodProjects.add(project);
+                result.add(project);
             }
         }
-        return neighborhoodProjects;
+        return result;
     }
 
-    // Update HDB officer slots
+    // Update officer slots
     public boolean updateHDBOfficerSlots(String projectId, int newSlots) {
-        // Enforce officer‐slot limits
         if (newSlots < 1 || newSlots > 10) {
             System.out.println("Error: Officer slots must be between 1 and 10.");
             return false;
         }
+
         for (Project project : projects) {
             if (project.getProjectId().equals(projectId)) {
                 if (newSlots >= project.getTotalOfficerSlots() - project.getAvailableOfficerSlots()) {
@@ -175,12 +158,19 @@ public class ProjectController {
                     project.setAvailableOfficerSlots(newSlots - (project.getTotalOfficerSlots() - project.getAvailableOfficerSlots()));
                     return true;
                 }
-                return false; // New slots are less than assigned officers
+                return false;
             }
         }
-        return false; // Project not found
+        return false;
     }
 
-
-
+    // Update an entire project (override)
+    public void updateProject(Project project) {
+        for (int i = 0; i < projects.size(); i++) {
+            if (projects.get(i).getProjectId().equals(project.getProjectId())) {
+                projects.set(i, project);
+                break;
+            }
+        }
+    }
 }
