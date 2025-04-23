@@ -1,9 +1,14 @@
 package controllers;
 
 import models.Project;
+
+import java.io.FileWriter;
+import java.io.IOException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 
 public class ProjectController {
 
@@ -171,6 +176,33 @@ public class ProjectController {
                 projects.set(i, project);
                 break;
             }
+        }
+    }
+
+   // Save all projects to a CSV file
+    public void saveProjectsToCSV(String filePath) {
+        try (FileWriter writer = new FileWriter(filePath)) {
+            // Write the header
+            writer.write("ProjectId,ProjectName,Neighborhood,FlatType,Units,OpeningDate,ClosingDate,ManagerNRIC,Visibility,OfficerSlots\n");
+
+            // Write each project
+            for (Project project : projects) {
+                for (Map.Entry<String, Integer> flatTypeEntry : project.getFlatTypeUnits().entrySet()) {
+                    writer.write(String.format("%s,%s,%s,%s,%d,%s,%s,%s,%b,%d\n",
+                            project.getProjectId(),
+                            project.getProjectName(),
+                            project.getNeighborhood(),
+                            flatTypeEntry.getKey(),
+                            flatTypeEntry.getValue(),
+                            new SimpleDateFormat("dd/MM/yyyy").format(project.getApplicationOpeningDate()),
+                            new SimpleDateFormat("dd/MM/yyyy").format(project.getApplicationClosingDate()),
+                            project.getCreatorNRIC(),
+                            project.isVisible(),
+                            project.getTotalOfficerSlots()));
+                }
+            }
+        } catch (IOException e) {
+            System.err.println("Error saving projects to CSV: " + e.getMessage());
         }
     }
 }
