@@ -15,6 +15,7 @@ public class HDBOfficerController implements IChangePassword, IFilter {
     private ProjectController projectController = new ProjectController();
 
     public boolean registerForProject(String officerNRIC, String projectId) {
+        // Existing validation code...
         for (Application app : applications) {
             if (app.getApplicantNRIC().equals(officerNRIC) 
                 && app.getProjectId().equals(projectId) 
@@ -23,7 +24,7 @@ public class HDBOfficerController implements IChangePassword, IFilter {
                 return false;
             }
         }
-
+    
         Project targetProject = projectController.getProjectDetails(projectId);
         for (HDBOfficer officer : officers) {
             if (officer.getNric().equals(officerNRIC) && officer.getAssignedProjectId() != null) {
@@ -34,8 +35,18 @@ public class HDBOfficerController implements IChangePassword, IFilter {
                 }
             }
         }
-
-        return true;
+    
+        // ADD THIS: Update the officer's information
+        for (HDBOfficer officer : officers) {
+            if (officer.getNric().equals(officerNRIC)) {
+                officer.setAssignedProjectId(projectId);
+                officer.setRegistrationStatus("Pending"); // Set initial status
+                System.out.println("Registration submitted for approval");
+                return true;
+            }
+        }
+    
+        return false; // Officer not found
     }
 
     private boolean hasOverlappingPeriod(Project project1, Project project2) {
@@ -102,7 +113,7 @@ public class HDBOfficerController implements IChangePassword, IFilter {
     public Receipt generateBookingReceipt(String applicationId) {
         for (Application application : applications) {
             if (application.getApplicationId().equals(applicationId) &&
-                (application.getStatus().equals("Successful") || application.getStatus().equals("Booked"))) {
+                (application.getStatus().equals("SUCCESSFUL") || application.getStatus().equals("BOOKED"))) {
 
                 Applicant applicant = retrieveApplicantByNRIC(application.getApplicantNRIC());
                 if (applicant == null) return null;

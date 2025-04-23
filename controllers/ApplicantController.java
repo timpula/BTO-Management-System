@@ -133,11 +133,15 @@ public class ApplicantController implements IChangePassword, IFilter {
     // Request withdrawal of an application
     public boolean requestWithdrawal(String nric, String applicationId) {
         Application application = applicationController.getApplicationByNRIC(nric);
-
+    
         if (application != null && application.getApplicationId().equals(applicationId)) {
-            application.setStatus("Withdrawn"); // Update the status to "Withdrawn"
-            System.out.println("Application withdrawn: " + applicationId);
-            return true;
+            if (application.getStatus().equals("SUCCESSFUL") || application.getStatus().equals("BOOKED")) {
+                System.out.println("Withdrawal request submitted for Application ID: " + applicationId);
+                return true;
+            } else {
+                System.out.println("Withdrawal request denied. Application status must be 'Successful' or 'Booked'.");
+                return false;
+            }
         } else {
             System.out.println("No matching application found for withdrawal.");
             return false;

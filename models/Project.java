@@ -34,7 +34,7 @@ public class Project {
         this.applicationClosingDate = applicationClosingDate;
         this.managerInCharge = managerInCharge;
         this.availableOfficerSlots = 10; // Default value
-        this.visibility = false; // Default visibility is off
+        this.visibility = true;
         this.flatTypeUnits = new HashMap<>();
     }
     

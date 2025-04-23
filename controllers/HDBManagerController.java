@@ -62,11 +62,11 @@ public class HDBManagerController implements IChangePassword, IFilter {
     // --- Application Approval/Rejection ---
 
     public boolean approveApplication(String applicationId) {
-        return applicationController.updateApplicationStatus(applicationId, "Successful");
+        return applicationController.updateApplicationStatus(applicationId, "SUCCESSFUL");
     }
 
     public boolean rejectApplication(String applicationId) {
-        return applicationController.updateApplicationStatus(applicationId, "Unsuccessful");
+        return applicationController.updateApplicationStatus(applicationId, "UNSUCCESSFUL");
     }
 
     // --- Withdrawal Request Approval/Rejection ---
@@ -77,7 +77,7 @@ public class HDBManagerController implements IChangePassword, IFilter {
 
     public boolean rejectWithdrawalRequest(String applicationId) {
         // Revert withdrawal: set back to Successful
-        return applicationController.updateApplicationStatus(applicationId, "Successful");
+        return applicationController.updateApplicationStatus(applicationId, "SUCCESSFUL");
     }
 
     // --- Project Visibility ---

@@ -28,7 +28,6 @@ public class ProjectController {
                String existingBase = p.getProjectName().split(" - ")[0].trim();
               // skip overlap if the **base** names match
               if (existingBase.equalsIgnoreCase(newBase)) {
-                  System.out.println("DEBUG: skipping overlap for same base name \"" + existingBase + "\"");
                   continue;
             }
 
@@ -81,7 +80,6 @@ public class ProjectController {
                     String existingBase = other.getProjectName().split(" - ")[0].trim();
                     // skip overlap if the base names match
                     if (existingBase.equalsIgnoreCase(newBase)) {
-                        System.out.println("DEBUG: skipping overlap for same base name \"" + existingBase + "\"");
                         continue;
                     }
 
@@ -130,9 +128,7 @@ public class ProjectController {
 
     // Get project details by ID
     public Project getProjectDetails(String projectId) {
-        System.out.println("DEBUG: Looking for project ID = " + projectId);
         for (Project project : projects) {
-            System.out.println("DEBUG: Checking project ID in list = " + project.getProjectId());
             if (project.getProjectId().equals(projectId)) {
                 return project;
             }

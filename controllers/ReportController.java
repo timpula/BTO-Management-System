@@ -53,8 +53,8 @@ public class ReportController {
 
         // Fetch all applications with status "Approved" or "Booked"
         List<Application> allApps = new ArrayList<>();
-        allApps.addAll(applicationController.getApplicationsByStatus("Approved"));
-        allApps.addAll(applicationController.getApplicationsByStatus("Booked"));
+        allApps.addAll(applicationController.getApplicationsByStatus("SUCCESSFUL"));
+        allApps.addAll(applicationController.getApplicationsByStatus("BOOKED"));
 
         // Populate report
         for (Application app : allApps) {
