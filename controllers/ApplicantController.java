@@ -82,6 +82,7 @@ public class ApplicantController implements IChangePassword, IFilter {
         List<Project> projects = projectController.viewAllProjects();
 
         for (Project project : projects) {
+            if (!project.isVisible()) continue; 
             if (checkEligibility(nric, project)) {
                 eligibleProjects.add(project);
             }
