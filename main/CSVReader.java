@@ -67,6 +67,18 @@ public class CSVReader {
             String maritalStatus = data[3].trim();
             String password = data[4].trim();
 
+            // When loading officers, check if they already exist as applicants
+            if (userType.equals("HDBOfficer")) {
+                User existingUser = userController.getUserByNRIC(nric);
+                if (existingUser != null && existingUser instanceof Applicant) {
+                    // Create new officer instance but keep applicant role
+                    HDBOfficer officer = new HDBOfficer(nric, name, password, age, maritalStatus);
+                    userController.addUser(officer);
+                    continue;
+                }
+            }
+
+            // Normal user creation
             User user;
             switch (userType) {
                 case "Applicant":
@@ -83,11 +95,8 @@ public class CSVReader {
             }
 
             userController.addUser(user);
-            System.out.println("DEBUG: Loaded user: " + name + " (" + userType + ")");
         }
-
         reader.close();
-        System.out.println("Loaded users from: " + filePath);
     }
 
     /**

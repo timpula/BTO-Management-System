@@ -164,22 +164,12 @@ public class ProjectController {
     }
 
     // Update an entire project (override)
-    public boolean updateProject(Project project) {
-        if (project == null || project.getProjectId() == null) {
-            System.out.println("DEBUG: Invalid project for update");
-            return false;
-        }
-
+    public void updateProject(Project project) {
         for (int i = 0; i < projects.size(); i++) {
             if (projects.get(i).getProjectId().equals(project.getProjectId())) {
                 projects.set(i, project);
-                System.out.println("DEBUG: Updated project: " + project.getProjectName() +
-                                   " (Slots: " + project.getAvailableOfficerSlots() + ")");
-                return true;
+                break;
             }
         }
-
-        System.out.println("DEBUG: Project not found for update: " + project.getProjectId());
-        return false;
     }
 }

@@ -20,14 +20,26 @@ public class UserController {
     }
 
     public User login(String nric, String password) {
+        // Validate and convert NRIC format
+        if (!nric.matches("[STFG]\\d{7}[A-Z]")) {
+            System.out.println("Invalid NRIC format. Must be in format like S1234567A");
+            return null;
+        }
+
         List<User> matchingUsers = new ArrayList<>();
-        System.out.println("DEBUG: Attempting login for NRIC: " + nric);
+        String upperNric = nric.toUpperCase();
         
-        // Get all roles for this NRIC
+        // First check for HDBOfficer role
         for (User user : users) {
-            if (user.getNric().equalsIgnoreCase(nric)) {
+            if (user.getNric().equals(upperNric) && user instanceof HDBOfficer) {
                 matchingUsers.add(user);
-                System.out.println("DEBUG: Found role: " + user.getUserType());
+            }
+        }
+        
+        // Then check for other roles
+        for (User user : users) {
+            if (user.getNric().equals(upperNric) && !(user instanceof HDBOfficer)) {
+                matchingUsers.add(user);
             }
         }
 
@@ -36,51 +48,51 @@ public class UserController {
             return null;
         }
 
-        // Verify password against first user (should be same for all roles)
         if (!matchingUsers.get(0).getPassword().equals(password)) {
             System.out.println("Invalid password.");
             return null;
         }
 
-        // Single role - auto-select
         if (matchingUsers.size() == 1) {
             currentUser = matchingUsers.get(0);
-            System.out.println("DEBUG: Logged in as " + currentUser.getUserType());
             return currentUser;
         }
 
-        // Multiple roles - show selection menu
-        try {
-            System.out.println("\nMultiple roles found. Please select your role:");
-            for (int i = 0; i < matchingUsers.size(); i++) {
-                System.out.println((i + 1) + ". " + matchingUsers.get(i).getUserType());
-            }
+        System.out.println("\nMultiple roles found. Please select your role:");
+        for (int i = 0; i < matchingUsers.size(); i++) {
+            System.out.println((i + 1) + ". " + matchingUsers.get(i).getUserType());
+        }
 
-            Scanner scanner = new Scanner(System.in);
-            while (true) {
-                System.out.print("Enter choice (1-" + matchingUsers.size() + "): ");
-                try {
-                    int choice = Integer.parseInt(scanner.nextLine());
-                    if (choice >= 1 && choice <= matchingUsers.size()) {
-                        currentUser = matchingUsers.get(choice - 1);
-                        System.out.println("DEBUG: Selected role: " + currentUser.getUserType());
-                        return currentUser;
-                    }
-                    System.out.println("Invalid choice. Please try again.");
-                } catch (NumberFormatException e) {
-                    System.out.println("Invalid input. Please enter a number.");
+        Scanner scanner = new Scanner(System.in);
+        while (true) {
+            System.out.print("Enter choice (1-" + matchingUsers.size() + "): ");
+            try {
+                int choice = Integer.parseInt(scanner.nextLine());
+                if (choice >= 1 && choice <= matchingUsers.size()) {
+                    currentUser = matchingUsers.get(choice - 1);
+                    return currentUser;
                 }
+            } catch (NumberFormatException e) {
+                System.out.println("Invalid input. Please enter a number.");
+                continue;
             }
-        } catch (Exception e) {
-            System.out.println("Error during role selection: " + e.getMessage());
-            return null;
+            System.out.println("Invalid choice. Please try again.");
         }
     }
 
     private List<User> findUsersByNric(String nric) {
         List<User> matchingUsers = new ArrayList<>();
+        
+        // Convert input NRIC to uppercase and validate format
+        String upperNric = nric.toUpperCase();
+        if (!upperNric.matches("[STFG]\\d{7}[A-Z]")) {
+            System.out.println("Invalid NRIC format. Must be like S1234567A");
+            return matchingUsers;
+        }
+
         for (User user : users) {
-            if (user.getNric().equalsIgnoreCase(nric)) {
+            // Compare with uppercase stored NRIC
+            if (user.getNric().equals(upperNric)) {
                 matchingUsers.add(user);
             }
         }
@@ -121,10 +133,8 @@ public class UserController {
     public boolean addUser(User user) {
         if (user != null) {
             users.add(user);
-            System.out.println("✅ User added to shared list: " + user.getName() + " (" + user.getNric() + ")");
             return true;
         }
-        System.out.println("❌ Failed to add user.");
         return false;
     }
 
