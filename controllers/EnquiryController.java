@@ -69,4 +69,8 @@ public class EnquiryController {
         }
         return false; // Enquiry not found
     }
+
+    public List<Enquiry> findAllEnquiries() {
+        return new ArrayList<>(enquiries);
+      }
 }

@@ -22,6 +22,8 @@ public class HDBManagerView {
     private RegistrationController registrationController;
     private ApplicationController applicationController;
     private ReportController reportController;
+    private EnquiryController enquiryController;
+
 
     public HDBManagerView() {
         scanner = new Scanner(System.in);
@@ -31,6 +33,8 @@ public class HDBManagerView {
         registrationController = new RegistrationController();
         applicationController = new ApplicationController();
         reportController = new ReportController();
+        enquiryController = new EnquiryController();
+
 
     }
 
@@ -55,7 +59,9 @@ public class HDBManagerView {
             System.out.println("6. Generate Reports");
             System.out.println("7. Update Profile");
             System.out.println("8. View All Projects");
-            System.out.println("9. Logout");
+            System.out.println("9. View All Enquires");
+            System.out.println("10. View and Reply to your Enquires");
+            System.out.println("11. Logout");
             System.out.print("Please select an option: ");
 
             choice = scanner.nextInt();
@@ -87,13 +93,19 @@ public class HDBManagerView {
                     displayAllProjects();
                     break;
                 case 9:
+                    displayAllEnquiries();
+                    break;
+                case 10:
+                    displayEnquiriesForManager(manager);
+                    break;
+                case 11:
                     System.out.println("Logging out...");
                     return;
                 default:
                     System.out.println("Invalid option. Please try again.");
                     break;
             }
-        } while (choice != 9);
+        } while (choice != 11);
     }
 
     private void displayCreateProject(HDBManager manager) {
@@ -958,5 +970,78 @@ public class HDBManagerView {
         }
         return;
     }
+
+    // View all enquiries for all projects
+private void displayAllEnquiries() {
+    System.out.println("\n==========================================");
+    System.out.println("         ALL PROJECT ENQUIRIES");
+    System.out.println("==========================================");
+
+    List<Enquiry> allEnquiries = enquiryController.findAllEnquiries();
+
+    if (allEnquiries.isEmpty()) {
+        System.out.println("No enquiries found.");
+        return;
+    }
+
+    for (Enquiry enquiry : allEnquiries) {
+        System.out.println("Enquiry ID: " + enquiry.getEnquiryId());
+        System.out.println("Applicant NRIC: " + enquiry.getUserNRIC());
+        System.out.println("Project ID: " + enquiry.getProjectId());
+        System.out.println("Message: " + enquiry.getContent());
+        System.out.println("Reply: " + (enquiry.getReply() == null ? "No reply yet" : enquiry.getReply()));
+        System.out.println("Date Submitted: " + enquiry.getEnquiryDate());
+        System.out.println("Date Replied: " + (enquiry.getReplyDate() == null ? "N/A" : enquiry.getReplyDate()));
+        System.out.println("------------------------------------------");
+    }
+}
+
+// View and reply to enquiries for the manager's assigned projects
+private void displayEnquiriesForManager(HDBManager manager) {
+    System.out.println("\n==========================================");
+    System.out.println("         YOUR PROJECT ENQUIRIES");
+    System.out.println("==========================================");
+
+    List<Project> managerProjects = projectController
+        .viewAllProjects()
+        .stream()
+        .filter(p -> p.getCreatorNRIC().equals(manager.getNric()))
+        .collect(Collectors.toList());
+
+    if (managerProjects.isEmpty()) {
+        System.out.println("You have no assigned projects.");
+        return;
+    }
+
+    for (Project project : managerProjects) {
+        List<Enquiry> enquiries = enquiryController
+            .viewEnquiriesByProject(project.getProjectId());
+
+        if (enquiries.isEmpty()) {
+            System.out.println("  No enquiries for this project.");
+            continue;
+        }
+
+        for (Enquiry enquiry : enquiries) {
+            System.out.println("  Enquiry ID: " + enquiry.getEnquiryId());
+            System.out.println("  Applicant NRIC: " + enquiry.getUserNRIC());
+            System.out.println("  Message: " + enquiry.getContent());
+            System.out.println("  Reply: " + (enquiry.getReply() == null ? "No reply yet" : enquiry.getReply()));
+            System.out.println("  Date Submitted: " + enquiry.getEnquiryDate());
+            System.out.println("  Date Replied: " + (enquiry.getReplyDate() == null ? "N/A" : enquiry.getReplyDate()));
+            System.out.println("------------------------------------------");
+        }
+    }
+
+    System.out.print("Enter Enquiry ID to reply (or press Enter to go back): ");
+    String enquiryId = scanner.nextLine();
+    if (!enquiryId.isEmpty()) {
+        System.out.print("Enter your reply: ");
+        String reply = scanner.nextLine();
+
+        boolean ok = enquiryController.replyToEnquiry(enquiryId, reply);
+        System.out.println(ok ? "Reply sent!" : "Enquiry not found.");
+    }
+}
     
 }
