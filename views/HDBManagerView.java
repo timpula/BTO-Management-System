@@ -5,11 +5,14 @@ import models.*;
 
 import java.util.List;
 import java.util.Scanner;
+import java.util.stream.Collectors;
 import java.util.Date;
 import java.text.SimpleDateFormat;
 import java.text.ParseException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.stream.Collectors;
+
 
 public class HDBManagerView {
     private Scanner scanner;
@@ -28,6 +31,7 @@ public class HDBManagerView {
         registrationController = new RegistrationController();
         applicationController = new ApplicationController();
         reportController = new ReportController();
+
     }
 
     public void displayDashboard(HDBManager manager) {
@@ -220,8 +224,15 @@ public class HDBManagerView {
         System.out.println("==========================================");
 
         // Use the IFilter method filterProjects instead of undefined filterProjectsByCreator
-        
-        List<Project> projects = managerController.filterProjects(manager.getNric());
+        //projectController.viewAllProjects
+
+        //List<Project> projects = managerController.filterProjects(manager.getNric());
+
+        List<Project> all = projectController.viewAllProjects();
+        List<Project> projects = all.stream()
+            .filter(p -> p.getCreatorNRIC().equals(manager.getNric()))
+            .collect(Collectors.toList());
+
 
         if (projects.isEmpty()) {
             System.out.println("No projects found.");

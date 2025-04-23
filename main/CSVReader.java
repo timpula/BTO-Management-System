@@ -146,7 +146,14 @@ public class CSVReader {
 
                 project.setTotalOfficerSlots(officerSlots);
                 project.setAvailableOfficerSlots(officerSlots);
-                project.setCreatorNRIC(manager);
+                //project.setCreatorNRIC(manager);
+                User managerUser = userController.viewUserDetails(manager);
+                if (managerUser != null && managerUser instanceof HDBManager) {
+                    project.setCreatorNRIC(managerUser.getNric());
+                } else {
+                    System.err.println("Manager not found or is not an HDBManager: " + manager);
+                    continue; // Skip this project if the manager is invalid
+                }
 
                 boolean created = projectController.createProject(project);
 
