@@ -65,24 +65,34 @@ public class ProjectController {
     public boolean editProject(String projectId, Project updatedProject) {
         for (Project project : projects) {
             if (project.getProjectId().equals(projectId)) {
-            // 3a) Enforce officer‐slot limits
-            int newSlots = updatedProject.getTotalOfficerSlots();
-            if (newSlots < 1 || newSlots > 10) {
-                System.out.println("Error: Officer slots must be between 1 and 10.");
-                return false;
-            }
-
-            // 3b) Prevent overlapping periods (skip the project itself)
-            for (Project other : projects) {
-                if (!other.getCreatorNRIC().equals(updatedProject.getCreatorNRIC())
-                    || other.getProjectId().equals(projectId)) continue;
-                Date o1 = other.getApplicationOpeningDate(), c1 = other.getApplicationClosingDate();
-                Date o2 = updatedProject.getApplicationOpeningDate(), c2 = updatedProject.getApplicationClosingDate();
-                if (!(c2.before(o1) || o2.after(c1))) {
-                    System.out.println("Error: Dates overlap with project " + other.getProjectId());
+                // Enforce officer‐slot limits
+                int newSlots = updatedProject.getTotalOfficerSlots();
+                if (newSlots < 1 || newSlots > 10) {
+                    System.out.println("Error: Officer slots must be between 1 and 10.");
                     return false;
                 }
-            }
+
+                // Prevent overlapping periods for the same manager (skip the project itself)
+                String newBase = updatedProject.getProjectName().split(" - ")[0].trim();
+                for (Project other : projects) {
+                    if (!other.getCreatorNRIC().equals(updatedProject.getCreatorNRIC())
+                        || other.getProjectId().equals(projectId)) continue;
+
+                    String existingBase = other.getProjectName().split(" - ")[0].trim();
+                    // skip overlap if the base names match
+                    if (existingBase.equalsIgnoreCase(newBase)) {
+                        System.out.println("DEBUG: skipping overlap for same base name \"" + existingBase + "\"");
+                        continue;
+                    }
+
+                    Date o1 = other.getApplicationOpeningDate(), c1 = other.getApplicationClosingDate();
+                    Date o2 = updatedProject.getApplicationOpeningDate(), c2 = updatedProject.getApplicationClosingDate();
+                    // if periods overlap
+                    if (!(c2.before(o1) || o2.after(c1))) {
+                        System.out.println("Error: Dates overlap with project " + other.getProjectId());
+                        return false;
+                    }
+                }
 
                 project.setProjectName(updatedProject.getProjectName());
                 project.setNeighborhood(updatedProject.getNeighborhood());
