@@ -190,23 +190,33 @@ public class ApplicantView{
         System.out.println("\n==========================================");
         System.out.println("         APPLICATION STATUS");
         System.out.println("==========================================");
-
+    
         // Call the controller to get application status
         Application application = applicantController.viewApplicationStatus(currentUserNRIC);
-
+    
         if (application == null) {
             System.out.println("You have no active applications.");
             return;
         }
-
+    
         // Retrieve project details for the application
         Project project = projectController.getProjectDetails(application.getProjectId());
-
+    
+        // Retrieve the applicant details
+        Applicant applicant = applicantController.getApplicantByNRIC(currentUserNRIC);
+    
         // Display application details
         System.out.println("Application ID: " + application.getApplicationId());
         System.out.println("Project: " + project.getProjectName() + " (" + project.getNeighborhood() + ")");
         System.out.println("Application Date: " + application.getApplicationDate());
         System.out.println("Status: " + application.getStatus());
+    
+        // Display booked flat type from the applicant
+        if (applicant.getBookedFlatType() != null && !applicant.getBookedFlatType().isEmpty()) {
+            System.out.println("Booked Flat Type: " + applicant.getBookedFlatType());
+        } else {
+            System.out.println("Booked Flat Type: Not yet selected");
+        }
     }
 
     private void displayWithdrawalRequest() {
