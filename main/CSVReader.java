@@ -135,7 +135,6 @@ public class CSVReader {
                 }
             }
             String officerList = officerListBuilder.toString().replaceAll(",$", "");
-            System.out.println("DEBUG (Raw CSV): officerList = [" + officerList + "]");
 
             String[] flatTypes = {type1, type2};
             int[] unitCounts = {unitsType1, unitsType2};
@@ -183,7 +182,7 @@ public class CSVReader {
                     officerName = officerName.trim().replace("\"", "");
 
                     if (!officerName.isEmpty()) {
-                        System.out.println("DEBUG: Looking for officer: " + officerName);
+
 
                         for (User user : userController.getAllUsers()) {
                             if (user.getName().equalsIgnoreCase(officerName)) {
@@ -210,11 +209,6 @@ public class CSVReader {
                                         
                                         // Add to officer controller
                                         officerController.addOfficer(projectOfficer);
-
-                                        System.out.println("DEBUG: Created assignment for " + projectOfficer.getName() + 
-                                                       " to " + proj.getProjectName() + 
-                                                       " (ID: " + proj.getProjectId() + ")" +
-                                                       " Status: " + projectOfficer.getRegistrationStatus());
                                     }
                                     break;
                                 }

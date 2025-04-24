@@ -151,13 +151,12 @@ public class UserController {
     public User getUserByNRICAndRole(String nric, String roleType) {
         for (User user : users) {
             if (user.getNric().equalsIgnoreCase(nric) && user.getUserType().equals(roleType)) {
-                System.out.println("DEBUG: Found user " + user.getName() + " with role " + roleType);
                 return user;
             }
         }
-        System.out.println("DEBUG: No user found with NRIC " + nric + " and role " + roleType);
         return null;
     }
+    
 
     // Filter projects by name
     public List<Project> filterProjects(String filterCriteria) {

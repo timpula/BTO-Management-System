@@ -105,10 +105,6 @@ public class HDBOfficerView {
         System.out.println("         REGISTER FOR PROJECT");
         System.out.println("==========================================");
 
-        // Show current project assignment and status
-        System.out.println("DEBUG: Assigned project ID = " + officer.getAssignedProjectId());
-        System.out.println("DEBUG: Registration status = " + officer.getRegistrationStatus());
-
         // Check if officer is already assigned to a project
         if (officer.getAssignedProjectId() != null && "Approved".equalsIgnoreCase(officer.getRegistrationStatus())) {
             System.out.println("You are already assigned to a project: " + officer.getAssignedProjectId());
