@@ -91,20 +91,35 @@ public class HDBOfficerController implements IChangePassword, IFilter {
     }
 
     /** Return list of all APPROVED projects assigned to this officer */
-    public List<Project> getAllAssignedProjects(String officerNRIC) {
-        Set<String> seen = new HashSet<>();
-        List<Project> result = new ArrayList<>();
-        for (HDBOfficer off : officers) {
-            if (off.getNric().equals(officerNRIC)
-             && "Approved".equalsIgnoreCase(off.getRegistrationStatus())
-             && off.getAssignedProjectId() != null
-             && seen.add(off.getAssignedProjectId())) {
-                Project p = projectController.getProjectDetails(off.getAssignedProjectId());
-                if (p != null) result.add(p);
-            }
+public List<Project> getAllAssignedProjects(String officerNRIC) {
+    Set<String> seen = new HashSet<>();
+    List<Project> result = new ArrayList<>();
+
+    // 1) Pre-seeded (CSV-imported) officers
+    for (HDBOfficer off : officers) {
+        if (off.getNric().equals(officerNRIC)
+         && "Approved".equalsIgnoreCase(off.getRegistrationStatus())
+         && off.getAssignedProjectId() != null
+         && seen.add(off.getAssignedProjectId())) {
+
+            Project p = projectController.getProjectDetails(off.getAssignedProjectId());
+            if (p != null) result.add(p);
         }
-        return result;
     }
+
+    // 2) “Live” registrations approved at runtime
+    for (Registration reg : registrationController.getRegistrationsByStatus("Approved")) {
+        if (reg.getOfficerNRIC().equals(officerNRIC)
+         && seen.add(reg.getProjectId())) {
+
+            Project p = projectController.getProjectDetails(reg.getProjectId());
+            if (p != null) result.add(p);
+        }
+    }
+
+    return result;
+}
+
 
     /** Look up an Applicant object by NRIC */
     public Applicant retrieveApplicantByNRIC(String applicantNRIC) {
@@ -280,14 +295,28 @@ public class HDBOfficerController implements IChangePassword, IFilter {
     public void addDummyApplicant(Applicant applicant){ applicants.add(applicant); }
 
     public boolean setOfficerRegistrationStatus(String officerNRIC, String projectId, String newStatus) {
-        for (HDBOfficer off : officers) {
-            if (off.getNric().equals(officerNRIC)
-             && projectId.equals(off.getAssignedProjectId())) {
-                off.setRegistrationStatus(newStatus);
-                return true;
-            }
+    // 1) try and update an existing pre-seeded entry
+    for (HDBOfficer off : officers) {
+        if (off.getNric().equals(officerNRIC)
+         && projectId.equals(off.getAssignedProjectId())) {
+            off.setRegistrationStatus(newStatus);
+            return true;
         }
-        return false;
     }
+
+    // 2) not found → create & add a new HDBOfficer assignment
+    User u = new UserController().viewUserDetails(officerNRIC);
+    if (u instanceof HDBOfficer) {
+        HDBOfficer fresh = new HDBOfficer(
+            u.getNric(), u.getName(), u.getPassword(),
+            u.getAge(), ((HDBOfficer)u).getMaritalStatus()
+        );
+        fresh.setAssignedProjectId(projectId);
+        fresh.setRegistrationStatus(newStatus);
+        officers.add(fresh);
+        return true;
+    }
+    return false;
+    } 
 
 }
