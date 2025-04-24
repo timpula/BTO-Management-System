@@ -167,21 +167,26 @@ public class HDBOfficerView {
     }
 
     private void displayViewRegistrationStatus(HDBOfficer officer) {
-        System.out.println("\n==========================================");
-        System.out.println("         REGISTRATION STATUS");
-        System.out.println("==========================================");
+    System.out.println("\n==========================================");
+    System.out.println("         REGISTRATION STATUS");
+    System.out.println("==========================================");
 
-        if (officer.getAssignedProjectId() == null) {
-            System.out.println("You haven't registered for any project yet.");
-            return;
-        }
+    List<Registration> pendingRegs = officerController.getAllRegistrationsForOfficer(officer.getNric());
 
-        Project project = projectController.getProjectDetails(officer.getAssignedProjectId());
-        String status = officerController.viewRegistrationStatus(officer.getNric(), officer.getAssignedProjectId());
-
-        System.out.println("Project: " + project.getProjectName() + " (" + project.getNeighborhood() + ")");
-        System.out.println("Status: " + status);
+    if (pendingRegs.isEmpty()) {
+        System.out.println("You have no pending registrations.");
+        return;
     }
+
+    for (Registration reg : pendingRegs) {
+        Project project = projectController.getProjectDetails(reg.getProjectId());
+        System.out.println("- Project: " + project.getProjectName() + " (" + project.getNeighborhood() + ")");
+        System.out.println("  Registration ID: " + reg.getRegistrationId());
+        System.out.println("  Status: " + reg.getStatus());
+        System.out.println("  Date: " + reg.getRegistrationDate());
+        System.out.println();
+    }
+}
 
     private void displayViewAssignedProject(HDBOfficer officer) {
         System.out.println("\n==========================================");
@@ -247,70 +252,75 @@ public class HDBOfficerView {
         System.out.println("\n==========================================");
         System.out.println("         MANAGE FLATS");
         System.out.println("==========================================");
-
+    
         List<Project> assignedProjects = officerController.getAllAssignedProjects(officer.getNric());
-        if (assignedProjects.isEmpty()) {
+        if (assignedProjects == null || assignedProjects.isEmpty()) {
             System.out.println("You are not assigned to any project yet.");
             return;
         }
-
-
-        Project project = officerController.viewAssignedProject(officer.getNric());
-
-        System.out.println("Project: " + project.getProjectName() + " (" + project.getNeighborhood() + ")");
-        System.out.println("\nCurrent Flat Units:");
-
-        for (String flatType : project.getFlatTypeUnits().keySet()) {
-            System.out.println("- " + flatType + ": " + project.getFlatTypeUnits().get(flatType) + " units");
+    
+        System.out.println("\nAssigned Projects:");
+        for (int i = 0; i < assignedProjects.size(); i++) {
+            Project project = assignedProjects.get(i);
+            System.out.println((i + 1) + ". " + project.getProjectName() + " (" + project.getNeighborhood() + ")");
         }
-
+    
+        System.out.print("\nSelect a project to manage (enter number): ");
+        int projChoice = scanner.nextInt();
+        scanner.nextLine(); // Consume newline
+    
+        if (projChoice < 1 || projChoice > assignedProjects.size()) {
+            System.out.println("Invalid selection.");
+            return;
+        }
+    
+        Project selectedProject = assignedProjects.get(projChoice - 1);
+    
+        System.out.println("\nManaging Project: " + selectedProject.getProjectName() + " (" + selectedProject.getNeighborhood() + ")");
+        System.out.println("\nCurrent Flat Units:");
+        for (Map.Entry<String, Integer> entry : selectedProject.getFlatTypeUnits().entrySet()) {
+            System.out.println("- " + entry.getKey() + ": " + entry.getValue() + " units");
+        }
+    
         System.out.println("\nSelect option:");
         System.out.println("1. Update Flat Remaining Count");
         System.out.println("2. Back to Dashboard");
         System.out.print("Enter your choice: ");
-
         int choice = scanner.nextInt();
         scanner.nextLine(); // Consume newline
-
+    
         if (choice == 1) {
             System.out.println("\nSelect flat type to update:");
-
-            int i = 1;
-            List<String> flatTypes = new java.util.ArrayList<>(project.getFlatTypeUnits().keySet());
-            for (String flatType : flatTypes) {
-                System.out.println(i + ". " + flatType);
-                i++;
+            List<String> flatTypes = new ArrayList<>(selectedProject.getFlatTypeUnits().keySet());
+            for (int i = 0; i < flatTypes.size(); i++) {
+                System.out.println((i + 1) + ". " + flatTypes.get(i));
             }
-
+    
             System.out.print("Enter flat type number: ");
             int flatChoice = scanner.nextInt();
             scanner.nextLine(); // Consume newline
-
+    
             if (flatChoice < 1 || flatChoice > flatTypes.size()) {
                 System.out.println("Invalid selection.");
                 return;
             }
-
+    
             String selectedFlatType = flatTypes.get(flatChoice - 1);
-
+    
             System.out.print("Enter new count for " + selectedFlatType + ": ");
             int newCount = scanner.nextInt();
             scanner.nextLine(); // Consume newline
-
+    
             if (newCount < 0) {
                 System.out.println("Count cannot be negative.");
                 return;
             }
-
-            boolean updated = officerController.updateFlatRemaining(project.getProjectId(), selectedFlatType, newCount);
-
-            if (updated) {
-                System.out.println("Flat count updated successfully!");
-            } else {
-                System.out.println("Failed to update flat count.");
-            }
+    
+            boolean updated = officerController.updateFlatRemaining(selectedProject.getProjectId(), selectedFlatType, newCount);
+            System.out.println(updated ? "Flat count updated successfully!" : "Failed to update flat count.");
         }
     }
+    
 
     private void displayReplyToEnquiries(HDBOfficer officer) {
         System.out.println("\n==========================================");
@@ -457,7 +467,8 @@ public class HDBOfficerView {
         System.out.println("         MANAGE FLAT SELECTION");
         System.out.println("==========================================");
 
-        if (officer.getAssignedProjectId() == null || !officer.getRegistrationStatus().equals("Approved")) {
+        Project assignedProject = officerController.viewAssignedProject(officer.getNric());
+        if (assignedProject == null) {
             System.out.println("You are not assigned to any project yet.");
             return;
         }

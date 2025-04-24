@@ -27,7 +27,6 @@ public class HDBOfficerController implements IChangePassword, IFilter {
             if (app.getApplicantNRIC().equals(officerNRIC)
              && app.getProjectId().equals(projectId)
              && !app.getStatus().equalsIgnoreCase("Withdrawn")) {
-                System.out.println("Cannot register: You have an active application for this project");
                 return false;
             }
         }
@@ -68,16 +67,11 @@ public class HDBOfficerController implements IChangePassword, IFilter {
               || p2.getApplicationClosingDate().before(p1.getApplicationOpeningDate()));
     }
 
-    /** Look up current registration status for this officer/project */
-    public String viewRegistrationStatus(String officerNRIC, String projectId) {
-    // pull all regs for this project
-    List<Registration> regs = registrationController.getRegistrationsByProject(projectId);
-    for (Registration reg : regs) {
-        if (reg.getOfficerNRIC().equals(officerNRIC)) {
-            return reg.getStatus();          // Pending, Approved, Rejected
-        }
-    }
-        return "Pending";
+    // /** Look up current registration status for this officer/project */
+    public List<Registration> getAllRegistrationsForOfficer(String officerNRIC) {
+        return registrationController.getRegistrationsByStatus("Pending").stream()
+            .filter(r -> r.getOfficerNRIC().equals(officerNRIC))
+            .collect(Collectors.toList());
     }
 
     /** Return the first assigned project (for single‐project officers) */
@@ -88,38 +82,22 @@ public class HDBOfficerController implements IChangePassword, IFilter {
             }
         }
         return null;
-    }
+    }    
 
     /** Return list of all APPROVED projects assigned to this officer */
-public List<Project> getAllAssignedProjects(String officerNRIC) {
-    Set<String> seen = new HashSet<>();
-    List<Project> result = new ArrayList<>();
-
-    // 1) Pre-seeded (CSV-imported) officers
-    for (HDBOfficer off : officers) {
-        if (off.getNric().equals(officerNRIC)
-         && "Approved".equalsIgnoreCase(off.getRegistrationStatus())
-         && off.getAssignedProjectId() != null
-         && seen.add(off.getAssignedProjectId())) {
-
-            Project p = projectController.getProjectDetails(off.getAssignedProjectId());
-            if (p != null) result.add(p);
+    public List<Project> getAllAssignedProjects(String officerNRIC) {
+        Set<String> seen = new HashSet<>();
+        List<Project> result = new ArrayList<>();
+        for (HDBOfficer off : officers) {
+            if (off.getNric().equals(officerNRIC)
+             && off.getAssignedProjectId() != null
+             && seen.add(off.getAssignedProjectId())) {
+                Project p = projectController.getProjectDetails(off.getAssignedProjectId());
+                if (p != null) result.add(p);
+            }
         }
+        return result;
     }
-
-    // 2) “Live” registrations approved at runtime
-    for (Registration reg : registrationController.getRegistrationsByStatus("Approved")) {
-        if (reg.getOfficerNRIC().equals(officerNRIC)
-         && seen.add(reg.getProjectId())) {
-
-            Project p = projectController.getProjectDetails(reg.getProjectId());
-            if (p != null) result.add(p);
-        }
-    }
-
-    return result;
-}
-
 
     /** Look up an Applicant object by NRIC */
     public Applicant retrieveApplicantByNRIC(String applicantNRIC) {
@@ -224,6 +202,7 @@ public List<Project> getAllAssignedProjects(String officerNRIC) {
             if (off.getNric().equals(nric)
              && off.getPassword().equals(currentPassword)) {
                 off.setPassword(newPassword);
+
                 return true;
             }
         }
