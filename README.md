@@ -1,7 +1,4 @@
-timpula: Create a readme.MD for my project
-
-GitHub Copilot: ```md
-# BTO Management System
+# BTO Management System - SC2002 SDDA
 
 The **BTO Management System** is a Java-based application designed to streamline the management of Build-To-Order (BTO) housing projects. It provides functionality for different user roles, including **HDB Managers**, **HDB Officers**, and **Applicants**, to manage projects, applications, and flat bookings efficiently.
 
