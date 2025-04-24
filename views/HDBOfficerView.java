@@ -317,64 +317,51 @@ public class HDBOfficerView {
         System.out.println("         REPLY TO ENQUIRIES");
         System.out.println("==========================================");
 
-        List<Project> assignedProjects = officerController.getAllAssignedProjects(officer.getNric());
-        if (assignedProjects.isEmpty()) {
-            System.out.println("You are not assigned to any project yet.");
-            return;
+    // 1) Grab every project this officer is handling
+    List<Project> assignedProjects = officerController.getAllAssignedProjects(officer.getNric());
+    if (assignedProjects == null || assignedProjects.isEmpty()) {
+        System.out.println("You are not assigned to any project yet.");
+        return;
+    }
+
+    // 2) For each project, fetch & display all its enquiries
+    for (Project project : assignedProjects) {
+        System.out.println("\nProject: " + project.getProjectName()
+                           + " (ID: " + project.getProjectId() + ")");
+        List<Enquiry> enquiries = enquiryController.viewEnquiriesByProject(project.getProjectId());
+        if (enquiries == null || enquiries.isEmpty()) {
+            System.out.println("  No enquiries for this project.");
+            continue;
         }
-
-
-        List<Enquiry> enquiries = enquiryController.viewEnquiriesByProject(officer.getAssignedProjectId());
-
-        if (enquiries.isEmpty()) {
-            System.out.println("No enquiries for your project.");
-            return;
-        }
-
-        System.out.println("Pending Enquiries:");
-        List<Enquiry> pendingEnquiries = enquiries.stream()
-                .filter(e -> e.getReply() == null)
-                .collect(java.util.stream.Collectors.toList());
-
-        if (pendingEnquiries.isEmpty()) {
-            System.out.println("No pending enquiries to reply.");
-            return;
-        }
-
-        for (int i = 0; i < pendingEnquiries.size(); i++) {
-            Enquiry enquiry = pendingEnquiries.get(i);
-            User user = userController.viewUserDetails(enquiry.getUserNRIC());
-
-            System.out.println((i + 1) + ". Enquiry ID: " + enquiry.getEnquiryId());
-            System.out.println("   From: " + user.getName() + " (" + user.getUserType() + ")");
-            System.out.println("   Date: " + enquiry.getEnquiryDate());
-            System.out.println("   Content: " + enquiry.getContent());
+        for (Enquiry e : enquiries) {
+            User user = userController.viewUserDetails(e.getUserNRIC());
+            System.out.println("  Enquiry ID: " + e.getEnquiryId());
+            System.out.println("    From: " 
+                + (user != null ? user.getName() : e.getUserNRIC())
+                + " (" + e.getUserNRIC() + ")");
+            System.out.println("    Date:  " + e.getEnquiryDate());
+            System.out.println("    Content: " + e.getContent());
+            System.out.println("    Reply:   " 
+                + (e.getReply() == null ? "No reply yet" : e.getReply()));
             System.out.println();
         }
-
-        System.out.print("Select an enquiry to reply (enter number): ");
-        int enquiryChoice = scanner.nextInt();
-        scanner.nextLine(); // Consume newline
-
-        if (enquiryChoice < 1 || enquiryChoice > pendingEnquiries.size()) {
-            System.out.println("Invalid selection.");
-            return;
-        }
-
-        Enquiry selectedEnquiry = pendingEnquiries.get(enquiryChoice - 1);
-
-        System.out.println("\nEnquiry Content: " + selectedEnquiry.getContent());
-        System.out.print("Enter your reply: ");
-        String reply = scanner.nextLine();
-
-        boolean success = enquiryController.replyToEnquiry(selectedEnquiry.getEnquiryId(), reply);
-
-        if (success) {
-            System.out.println("Reply sent successfully!");
-        } else {
-            System.out.println("Failed to send reply.");
-        }
     }
+
+    // 3) Let the officer reply to one of them
+    System.out.print("Enter Enquiry ID to reply (or press Enter to go back): ");
+    String enquiryId = scanner.nextLine().trim();
+    if (enquiryId.isEmpty()) return;
+
+    System.out.print("Enter your reply: ");
+    String reply = scanner.nextLine();
+
+    boolean success = enquiryController.replyToEnquiry(enquiryId, reply);
+    if (success) {
+        System.out.println("Reply sent successfully!");
+    } else {
+        System.out.println("Failed to send reply. Please check the Enquiry ID and try again.");
+    }
+}
 
     private void displayUpdateProfile(HDBOfficer officer) {
         System.out.println("\n==========================================");
