@@ -273,4 +273,29 @@ public class HDBOfficerController implements IChangePassword, IFilter {
     public void addDummyApplication(Application a)    { applications.add(a); }
     public void addDummyApplicant(Applicant applicant){ applicants.add(applicant); }
 
+    public boolean setOfficerRegistrationStatus(String officerNRIC, String projectId, String newStatus) {
+    // 1) try and update an existing pre-seeded entry
+    for (HDBOfficer off : officers) {
+        if (off.getNric().equals(officerNRIC)
+         && projectId.equals(off.getAssignedProjectId())) {
+            off.setRegistrationStatus(newStatus);
+            return true;
+        }
+    }
+
+    // 2) not found → create & add a new HDBOfficer assignment
+    User u = new UserController().viewUserDetails(officerNRIC);
+    if (u instanceof HDBOfficer) {
+        HDBOfficer fresh = new HDBOfficer(
+            u.getNric(), u.getName(), u.getPassword(),
+            u.getAge(), ((HDBOfficer)u).getMaritalStatus()
+        );
+        fresh.setAssignedProjectId(projectId);
+        fresh.setRegistrationStatus(newStatus);
+        officers.add(fresh);
+        return true;
+    }
+    return false;
+    } 
+
 }

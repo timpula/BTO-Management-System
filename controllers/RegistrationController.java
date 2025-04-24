@@ -70,4 +70,14 @@ public class RegistrationController {
         }
         return true; // Officer is available
     }
+
+        // Retrieve a registration by its ID
+        public Registration getRegistrationById(String registrationId) {
+            for (Registration registration : registrations) {
+                if (registration.getRegistrationId().equals(registrationId)) {
+                    return registration;
+                }
+            }
+            return null;
+        }
 }
