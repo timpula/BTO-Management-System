@@ -254,8 +254,7 @@ public class HDBOfficerView {
             System.out.println("You are not assigned to any project yet.");
             return;
         }
-    
-        System.out.println("\nAssigned Projects:");
+            System.out.println("\nAssigned Projects:");
         for (int i = 0; i < assignedProjects.size(); i++) {
             Project project = assignedProjects.get(i);
             System.out.println((i + 1) + ". " + project.getProjectName() + " (" + project.getNeighborhood() + ")");
@@ -329,7 +328,6 @@ public class HDBOfficerView {
         System.out.println("You are not assigned to any project yet.");
         return;
     }
-
     // 2) For each project, fetch & display all its enquiries
     for (Project project : assignedProjects) {
         System.out.println("\nProject: " + project.getProjectName()
@@ -465,6 +463,9 @@ public class HDBOfficerView {
 
         Project assignedProject = officerController.viewAssignedProject(officer.getNric());
         if (assignedProject == null) {
+        // Step 1: Retrieve all assigned projects for the officer
+        List<Project> assignedProjects = officerController.getAllAssignedProjects(officer.getNric());
+        if (assignedProjects == null || assignedProjects.isEmpty()) {
             System.out.println("You are not assigned to any project yet.");
             return;
         }
@@ -506,6 +507,7 @@ public class HDBOfficerView {
 
         displayManageFlatSelectionForApplicant(officer, selectedApp, applicant);
     }
+}
 
     // Helper method to handle flat selection for a specific applicant
     private void displayManageFlatSelectionForApplicant(HDBOfficer officer, Application application,

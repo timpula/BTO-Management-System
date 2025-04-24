@@ -2,7 +2,7 @@ package main;
 
 public class CSVFilePaths {
 
-    private final String applicationFolderFilePath = "/Users/timothyp/Documents/GitHub/BTO-Management-System/";
+    private final String applicationFolderFilePath = "c:\\Users\\alien\\OneDrive\\Desktop\\GitHub codes\\BTO-Management-System\\";
     
     private final String applicantListFilePath = applicationFolderFilePath + "ApplicantList.csv";
     private final String managerListFilePath = applicationFolderFilePath + "ManagerList.csv";
