@@ -105,7 +105,7 @@ public class HDBOfficerView {
         System.out.println("         REGISTER FOR PROJECT");
         System.out.println("==========================================");
 
-        // ✅ S: Show current project assignment and status
+        // Show current project assignment and status
         System.out.println("DEBUG: Assigned project ID = " + officer.getAssignedProjectId());
         System.out.println("DEBUG: Registration status = " + officer.getRegistrationStatus());
 
@@ -153,6 +153,10 @@ public class HDBOfficerView {
         if (confirm.equalsIgnoreCase("Y")) {
             boolean success = officerController.registerForProject(officer.getNric(), selectedProject.getProjectId());
             if (success) {
+            // Update the officer's assigned project ID and registration status
+            officer.setAssignedProjectId(selectedProject.getProjectId());
+            officer.setRegistrationStatus("Pending");
+
                 System.out.println("Registration submitted successfully!");
             } else {
                 System.out.println("Failed to submit registration. Please try again later.");

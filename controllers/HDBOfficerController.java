@@ -70,15 +70,14 @@ public class HDBOfficerController implements IChangePassword, IFilter {
 
     /** Look up current registration status for this officer/project */
     public String viewRegistrationStatus(String officerNRIC, String projectId) {
-        UserController uc = new UserController();
-        User u = uc.viewUserDetails(officerNRIC);
-        if (u instanceof HDBOfficer) {
-            HDBOfficer off = (HDBOfficer) u;
-            if (projectId.equals(off.getAssignedProjectId())) {
-                return off.getRegistrationStatus();
-            }
+    // pull all regs for this project
+    List<Registration> regs = registrationController.getRegistrationsByProject(projectId);
+    for (Registration reg : regs) {
+        if (reg.getOfficerNRIC().equals(officerNRIC)) {
+            return reg.getStatus();          // Pending, Approved, Rejected
         }
-        return "Not Registered";
+    }
+        return "Pending";
     }
 
     /** Return the first assigned project (for single‐project officers) */
@@ -279,5 +278,16 @@ public class HDBOfficerController implements IChangePassword, IFilter {
     public void addDummyOfficer(HDBOfficer officer)   { officers.add(officer); }
     public void addDummyApplication(Application a)    { applications.add(a); }
     public void addDummyApplicant(Applicant applicant){ applicants.add(applicant); }
+
+    public boolean setOfficerRegistrationStatus(String officerNRIC, String projectId, String newStatus) {
+        for (HDBOfficer off : officers) {
+            if (off.getNric().equals(officerNRIC)
+             && projectId.equals(off.getAssignedProjectId())) {
+                off.setRegistrationStatus(newStatus);
+                return true;
+            }
+        }
+        return false;
+    }
 
 }

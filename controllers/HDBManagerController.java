@@ -18,6 +18,7 @@ public class HDBManagerController implements IChangePassword, IFilter {
     private ProjectController projectController;
     private RegistrationController registrationController;
     private ApplicationController applicationController;
+    private HDBOfficerController officerController;
 
     /**
      * Constructor for dependency injection.
@@ -25,11 +26,13 @@ public class HDBManagerController implements IChangePassword, IFilter {
     public HDBManagerController(UserController uc,
                                 ProjectController pc,
                                 RegistrationController rc,
-                                ApplicationController ac) {
+                                ApplicationController ac,
+                                HDBOfficerController oc) {
         this.userController         = uc;
         this.projectController      = pc;
         this.registrationController = rc;
         this.applicationController  = ac;
+        this.officerController      = oc;
     }
 
     /**
@@ -39,17 +42,44 @@ public class HDBManagerController implements IChangePassword, IFilter {
         this(new UserController(),
              new ProjectController(),
              new RegistrationController(),
-             new ApplicationController());
+             new ApplicationController(),
+             new HDBOfficerController());
     }
 
     // --- Officer Registration Approval/Rejection ---
 
+  /**
+     * Approve officer registration and update officer status.
+     */
     public boolean approveOfficerRegistration(String registrationId) {
-        return registrationController.updateRegistrationStatus(registrationId, "Approved");
+        // 1) update Registration record
+        boolean ok = registrationController.updateRegistrationStatus(registrationId, "Approved");
+        if (!ok) return false;
+
+        // 2) sync officer model
+        Registration reg = registrationController.getRegistrationById(registrationId);
+        if (reg == null) return false;
+        return officerController.setOfficerRegistrationStatus(
+            reg.getOfficerNRIC(),
+            reg.getProjectId(),
+            "Approved"
+        );
     }
 
+    /**
+     * Reject officer registration and update officer status.
+     */
     public boolean rejectOfficerRegistration(String registrationId) {
-        return registrationController.updateRegistrationStatus(registrationId, "Rejected");
+        boolean ok = registrationController.updateRegistrationStatus(registrationId, "Rejected");
+        if (!ok) return false;
+
+        Registration reg = registrationController.getRegistrationById(registrationId);
+        if (reg == null) return false;
+        return officerController.setOfficerRegistrationStatus(
+            reg.getOfficerNRIC(),
+            reg.getProjectId(),
+            "Rejected"
+        );
     }
 
     /**
