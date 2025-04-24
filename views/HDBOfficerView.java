@@ -461,8 +461,6 @@ public class HDBOfficerView {
         System.out.println("         MANAGE FLAT SELECTION");
         System.out.println("==========================================");
 
-        Project assignedProject = officerController.viewAssignedProject(officer.getNric());
-        if (assignedProject == null) {
         // Step 1: Retrieve all assigned projects for the officer
         List<Project> assignedProjects = officerController.getAllAssignedProjects(officer.getNric());
         if (assignedProjects == null || assignedProjects.isEmpty()) {
@@ -470,21 +468,42 @@ public class HDBOfficerView {
             return;
         }
 
-        // Get successful applications for this project
-        List<Application> applications = applicationController.getApplicationsByProject(officer.getAssignedProjectId());
-        List<Application> successfulApplications = applications.stream()
-                .filter(a -> a.getStatus().equals("Successful"))
-                .collect(java.util.stream.Collectors.toList());
+        // Step 2: Display the list of assigned projects
+        System.out.println("You are in charge of the following projects:");
+        for (int i = 0; i < assignedProjects.size(); i++) {
+            Project project = assignedProjects.get(i);
+            System.out.println((i + 1) + ". " + project.getProjectName() + " (ID: " + project.getProjectId() + ")");
+        }
 
-        if (successfulApplications.isEmpty()) {
-            System.out.println("No successful applications to process for flat selection.");
+        // Step 3: Allow the officer to select a project
+        System.out.print("Select a project to manage flat selection (enter number): ");
+        int projectChoice = scanner.nextInt();
+        scanner.nextLine(); // Consume newline
+
+        if (projectChoice < 1 || projectChoice > assignedProjects.size()) {
+            System.out.println("Invalid selection.");
             return;
         }
 
-        System.out.println("Successful Applications:");
+        Project selectedProject = assignedProjects.get(projectChoice - 1);
+
+        // Step 4: Retrieve successful applications for the selected project
+        List<Application> applications = applicationController.getApplicationsByProject(selectedProject.getProjectId());
+        List<Application> successfulApplications = applications.stream()
+                .filter(a -> "Successful".equalsIgnoreCase(a.getStatus()))
+                .collect(Collectors.toList());
+
+        // Step 5: Check if there are any successful applications
+        if (successfulApplications.isEmpty()) {
+            System.out.println("No successful applications to process for flat selection in this project.");
+            return;
+        }
+
+        // Step 6: Display the list of successful applications
+        System.out.println("\nSuccessful Applications:");
         for (int i = 0; i < successfulApplications.size(); i++) {
             Application app = successfulApplications.get(i);
-            Applicant applicant = (Applicant) officerController.retrieveApplicantByNRIC(app.getApplicantNRIC());
+            Applicant applicant = officerController.retrieveApplicantByNRIC(app.getApplicantNRIC());
 
             System.out.println((i + 1) + ". Application ID: " + app.getApplicationId());
             System.out.println("   Applicant: " + applicant.getName() + " (NRIC: " + applicant.getNric() + ")");
@@ -493,6 +512,7 @@ public class HDBOfficerView {
             System.out.println();
         }
 
+        // Step 7: Allow the officer to select an application for flat selection
         System.out.print("Select an application for flat selection (enter number): ");
         int appChoice = scanner.nextInt();
         scanner.nextLine(); // Consume newline
@@ -502,89 +522,84 @@ public class HDBOfficerView {
             return;
         }
 
+        // Step 8: Proceed with flat selection for the selected application
         Application selectedApp = successfulApplications.get(appChoice - 1);
-        Applicant applicant = (Applicant) officerController.retrieveApplicantByNRIC(selectedApp.getApplicantNRIC());
+        Applicant applicant = officerController.retrieveApplicantByNRIC(selectedApp.getApplicantNRIC());
 
         displayManageFlatSelectionForApplicant(officer, selectedApp, applicant);
     }
-}
+
 
     // Helper method to handle flat selection for a specific applicant
-    private void displayManageFlatSelectionForApplicant(HDBOfficer officer, Application application,
-            Applicant applicant) {
+    private void displayManageFlatSelectionForApplicant(HDBOfficer officer, Application application, Applicant applicant) {
         System.out.println("\n==========================================");
         System.out.println("         FLAT SELECTION");
         System.out.println("==========================================");
-
-        Project project = officerController.viewAssignedProject(officer.getNric());
-
+    
+        // Retrieve all projects the officer is managing
+        List<Project> assignedProjects = officerController.getAllAssignedProjects(officer.getNric());
+        if (assignedProjects == null || assignedProjects.isEmpty()) {
+            System.out.println("You are not assigned to any projects.");
+            return;
+        }
+    
+        // Step 1: Verify that the application belongs to one of the officer's assigned projects
+        Project matchingProject = assignedProjects.stream()
+                .filter(project -> project.getProjectId().equals(application.getProjectId()))
+                .findFirst()
+                .orElse(null);
+    
+        if (matchingProject == null) {
+            System.out.println("Error: The application does not belong to any project you are managing.");
+            System.out.println("Application Project ID: " + application.getProjectId());
+            System.out.println("Your Assigned Projects: ");
+            assignedProjects.forEach(project -> System.out.println("- " + project.getProjectName() + " (ID: " + project.getProjectId() + ")"));
+            return;
+        }
+    
         System.out.println("Applicant: " + applicant.getName() + " (NRIC: " + applicant.getNric() + ")");
-        System.out.println("Project: " + project.getProjectName());
-
-        System.out.println("\nAvailable Flat Types:");
-        List<String> flatTypes = new java.util.ArrayList<>(project.getFlatTypeUnits().keySet());
-        for (int i = 0; i < flatTypes.size(); i++) {
-            String flatType = flatTypes.get(i);
-            int remaining = project.getFlatTypeUnits().get(flatType);
-            System.out.println((i + 1) + ". " + flatType + " (" + remaining + " remaining)");
-        }
-
-        System.out.print("Select flat type for this applicant (enter number): ");
-        int flatChoice = scanner.nextInt();
-        scanner.nextLine(); // Consume newline
-
-        if (flatChoice < 1 || flatChoice > flatTypes.size()) {
-            System.out.println("Invalid selection.");
+        System.out.println("Project: " + matchingProject.getProjectName());
+    
+        // Step 2: Check if the application specifies a flat type
+        String requestedFlatType = application.getFlatType();
+        if (requestedFlatType == null || requestedFlatType.isEmpty()) {
+            System.out.println("The applicant has not specified a flat type in their application.");
             return;
         }
-
-        String selectedFlatType = flatTypes.get(flatChoice - 1);
-
-        // Check if flat type has available units
-        if (project.getFlatTypeUnits().get(selectedFlatType) <= 0) {
-            System.out.println("No units of this flat type are available. Please select another type.");
+    
+        // Step 3: Check if the requested flat type is available in the project
+        Integer remainingUnits = matchingProject.getFlatTypeUnits().get(requestedFlatType);
+        if (remainingUnits == null || remainingUnits <= 0) {
+            System.out.println("The requested flat type (" + requestedFlatType + ") is not available in this project.");
             return;
         }
-
-        System.out.println("\nConfirm flat selection:");
-        System.out.println("Applicant: " + applicant.getName());
-        System.out.println("Project: " + project.getProjectName());
-        System.out.println("Selected Flat Type: " + selectedFlatType);
-        System.out.print("Confirm? (Y/N): ");
-
+    
+        // Step 4: Confirm flat selection
+        System.out.println("\nRequested Flat Type: " + requestedFlatType + " (" + remainingUnits + " units remaining)");
+        System.out.print("Confirm flat selection for this applicant? (Y/N): ");
         String confirm = scanner.nextLine();
-
+    
         if (confirm.equalsIgnoreCase("Y")) {
-            // Update application with flat type
-            boolean updated = officerController.updateFlatSelection(application.getApplicationId(), selectedFlatType);
-
-            // Update applicant profile
+    
+            // Step 6: Update applicant profile
+            applicant.setBookedFlatType(requestedFlatType); // Use setBookedFlatType
+            applicant.setBookedProjectId(matchingProject.getProjectId()); // Use setBookedProjectId
             boolean profileUpdated = officerController.updateApplicantProfile(applicant.getNric(),
-                    project.getProjectId(), selectedFlatType);
+                    matchingProject.getProjectId(), requestedFlatType);
+  
+           application.setStatus("BOOKED"); // Update application status to "Booked",
 
-            // Update application status to "Booked"
-            boolean statusUpdated = officerController.updateApplicationStatus(application.getApplicationId(), "Booked");
-
-            // Update flat count
-            int currentCount = project.getFlatTypeUnits().get(selectedFlatType);
-            boolean flatCountUpdated = officerController.updateFlatRemaining(project.getProjectId(), selectedFlatType,
+            // Step 8: Update flat count
+            int currentCount = matchingProject.getFlatTypeUnits().get(requestedFlatType);
+            boolean flatCountUpdated = officerController.updateFlatRemaining(matchingProject.getProjectId(), requestedFlatType,
                     currentCount - 1);
-
-            if (updated && profileUpdated && statusUpdated && flatCountUpdated) {
+    
+            if (profileUpdated && flatCountUpdated) {
                 System.out.println("Flat selection completed successfully!");
                 System.out.println("Application status updated to 'Booked'");
-                System.out.println("Applicant profile updated with flat type: " + selectedFlatType);
+                System.out.println("Applicant profile updated with flat type: " + requestedFlatType);
                 System.out.println("Flat count updated.");
 
-                // Generate receipt automatically
-                Receipt receipt = officerController.generateBookingReceipt(application.getApplicationId());
-                System.out.println("\nBooking Receipt Generated:");
-                System.out.println("Receipt ID: " + receipt.getReceiptId());
-                System.out.println(
-                        "Applicant: " + receipt.getApplicantName() + " (NRIC: " + receipt.getApplicantNRIC() + ")");
-                System.out.println("Project: " + receipt.getProjectName());
-                System.out.println("Flat Type: " + receipt.getFlatType());
-                System.out.println("Booking Date: " + receipt.getBookingDate());
             } else {
                 System.out.println("Failed to complete flat selection. Please try again.");
             }
@@ -597,32 +612,57 @@ public class HDBOfficerView {
         System.out.println("\n==========================================");
         System.out.println("         GENERATE BOOKING RECEIPT");
         System.out.println("==========================================");
-
+    
+        // Step 1: Retrieve all assigned projects for the officer
         List<Project> assignedProjects = officerController.getAllAssignedProjects(officer.getNric());
         if (assignedProjects == null || assignedProjects.isEmpty()) {
             System.out.println("You are not assigned to any project yet.");
             return;
         }
-
+    
+        // Step 2: Display assigned projects
         System.out.println("\nYour Assigned Projects:");
         for (Project project : assignedProjects) {
             System.out.println("- " + project.getProjectName() + " (ID: " + project.getProjectId() + ")");
         }
-
+    
+        // Step 3: Select a project
         System.out.print("\nEnter Project ID to generate receipt for: ");
         String projectId = scanner.nextLine().trim();
-
+    
+        // Step 4: Retrieve applications for the selected project
         List<Application> applications = applicationController.getApplicationsByProject(projectId);
-        List<Application> approvedApplications = applications.stream()
-            .filter(app -> app.getStatus().equalsIgnoreCase("Approved"))
-            .collect(Collectors.toList());
-
-        if (approvedApplications.isEmpty()) {
-            System.out.println("No approved applications found for this project.");
+        List<Application> bookedApplications = applications.stream()
+                .filter(app -> app.getStatus().equalsIgnoreCase("Booked"))
+                .collect(Collectors.toList());
+    
+        if (bookedApplications.isEmpty()) {
+            System.out.println("No booked applications found for this project.");
             return;
         }
-
-        // ... rest of receipt generation code ...
+    
+        // Step 5: Generate and display receipts
+        System.out.println("\nBooking Receipts:");
+        for (Application app : bookedApplications) {
+            Applicant applicant = officerController.retrieveApplicantByNRIC(app.getApplicantNRIC());
+            Project project = projectController.getProjectDetails(app.getProjectId());
+    
+            if (applicant != null && project != null) {
+                System.out.println("\n==========================================");
+                System.out.println("Receipt for Applicant: " + applicant.getName());
+                System.out.println("==========================================");
+                System.out.println("Applicant Name: " + applicant.getName());
+                System.out.println("NRIC: " + applicant.getNric());
+                System.out.println("Age: " + applicant.getAge());
+                System.out.println("Marital Status: " + applicant.getMaritalStatus());
+                System.out.println("Flat Type Booked: " + app.getFlatType());
+                System.out.println("Project Name: " + project.getProjectName());
+                System.out.println("Neighborhood: " + project.getNeighborhood());
+                System.out.println("==========================================");
+            } else {
+                System.out.println("Error: Could not retrieve details for application ID: " + app.getApplicationId());
+            }
+        }
     }
 
     private void displaySetFilters(HDBOfficer officer) {
